@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="あたまドリル">
+<meta name="theme-color" content="#111317">
+<title>あたまドリル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 明るく、毎日ちょっとやりたくなる小さな道場
+   IDEA: 小学校の計算ドリルの黄色い表紙と、赤ペンの丸つけ
+   PICTURE: 大きな問題数字と、正解で描かれる赤い◯ / ミスで✕
+   COLOUR and TYPE: ドリル黄・墨・赤ペン / M PLUS Rounded 1c
+   LAYOUT: 片手で使える1カラム、下に電卓配列のテンキー */
+:root{color-scheme:dark;
+--bg:#111317;--band:#181b21;--ink:#eef0f3;--sub:#8b919c;
+--y:#7cc4ff;--yink:#0b0d10;--card:#1a1d23;--line:#2a2e36;
+--red:#ff6b5e;--key:#22262d}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "M PLUS Rounded 1c",system-ui,sans-serif;overflow-x:clip;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
+button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.hide{display:none!important}
+.view{max-width:560px;margin:0 auto}
+.top{background:var(--band);color:var(--ink);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 22px) max(5vw,18px) 20px}
+.top h1{font-size:34px;line-height:1.05;margin:0;font-weight:800}
+.stat{display:flex;gap:22px;margin-top:12px;font-weight:700;font-size:14px}
+.stat b{font-size:30px;line-height:1;margin-right:2px}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:16px;height:86px}
+.week div{display:flex;flex-direction:column;align-items:center;font-size:13px;font-weight:700}
+.week .b{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.week i{display:block;width:100%;max-width:26px;background:var(--y);border-radius:6px 6px 2px 2px;min-height:3px;opacity:.85}
+.week .t i{background:var(--ink);opacity:1}
+section{padding:20px max(5vw,18px) 0}
+h2{font-size:17px;margin:0 0 10px;font-weight:800}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:0 16px;border-radius:22px;border:2px solid var(--line);background:var(--card);font-weight:700}
+.chip[aria-pressed=true]{background:var(--y);color:var(--yink);border-color:var(--y)}
+.note{color:var(--sub);font-size:14px;margin:8px 0 0}
+.rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.rule{text-align:left;padding:14px;border-radius:16px;border:2px solid var(--line);background:var(--card);min-height:104px;display:flex;flex-direction:column;gap:2px}
+.rule b{font-size:16px}.rule span{font-size:13px;color:var(--sub);line-height:1.4}
+.rule em{font-style:normal;font-weight:800;margin-top:auto;font-size:14px}
+.rule[aria-pressed=true]{border-color:var(--y);box-shadow:inset 0 0 0 1px var(--y)}
+.go{display:block;width:100%;min-height:60px;margin:22px 0 4px;border:0;border-radius:18px;background:var(--y);color:var(--yink);font-size:22px;font-weight:800}
+.go:disabled{opacity:.4}
+details{margin:18px 0 calc(env(safe-area-inset-bottom) + 28px);background:var(--card);border:2px solid var(--line);border-radius:16px;padding:2px 16px}
+summary{min-height:44px;display:flex;align-items:center;font-weight:800;cursor:pointer}
+.tips{margin:0 0 14px;padding-left:1.1em}.tips li{margin:8px 0}.tips b{white-space:nowrap}
+#play,#mem,#quiz{min-height:100dvh;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 10px) max(4vw,14px) calc(env(safe-area-inset-bottom) + 12px)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.quit{min-height:44px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:var(--card);font-weight:700}
+.clock{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.score{font-weight:800;min-width:76px;text-align:right;white-space:nowrap}
+.prog{height:8px;background:var(--line);border-radius:4px;margin-top:10px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--y);width:0}
+.board{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;min-height:230px}
+.q{font-size:clamp(44px,14vw,76px);font-weight:800;line-height:1.1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ans{margin-top:14px;min-width:3.2em;padding:0 .3em;font-size:clamp(44px,13vw,70px);font-weight:800;line-height:1.25;text-align:center;border-bottom:4px dashed var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
+.q.long{font-size:clamp(24px,7.4vw,40px);white-space:normal;text-align:center;text-wrap:balance;line-height:1.35}
+.arow{display:flex;align-items:flex-end;gap:6px}.unit{font-size:24px;font-weight:800;padding-bottom:10px}
+.exp{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.exp h3{margin:0;font-size:19px;font-weight:800}.exp h3.ng{color:var(--red)}
+.exp p,.log p{margin:0;white-space:pre-line;font-size:17px;line-height:1.75;font-variant-numeric:tabular-nums}
+.exp button{min-height:56px;border:0;border-radius:14px;background:var(--y);color:var(--yink);font-size:20px;font-weight:800}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.log li{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:4px 14px}
+.log summary{min-height:44px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer}
+.log b{white-space:nowrap}.log .ng b,.log .ng i{color:var(--red)}.log i{font-style:normal;margin-right:6px}
+.log p{color:var(--sub);font-size:15px;padding:0 0 10px}
+.ans.ng{color:var(--red)}.ans s{color:var(--sub);font-size:.55em;margin-right:.3em}
+.mark{position:absolute;inset:0;margin:auto;width:min(68vw,290px);height:min(68vw,290px);pointer-events:none;opacity:0}
+.mark path{fill:none;stroke:var(--red);stroke-width:9;stroke-linecap:round;stroke-dasharray:1000;stroke-dashoffset:1000}
+.mark.on{opacity:.8}.mark.on path{animation:draw .28s ease-out forwards}
+.mark[data-t=o] .x,.mark[data-t=x] .o{display:none}
+@keyframes draw{to{stroke-dashoffset:0}}
+@media(prefers-reduced-motion:reduce){.mark.on path{animation:none;stroke-dashoffset:0}}
+.pad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pad button{height:clamp(56px,9vh,74px);border-radius:16px;border:0;background:var(--key);box-shadow:0 3px 0 var(--line);font-size:28px;font-weight:800;user-select:none;-webkit-user-select:none}
+.pad button:active{transform:translateY(3px);box-shadow:none}
+.pad .fn{font-size:18px;color:var(--sub)}
+.big{font-size:clamp(60px,20vw,92px);font-weight:800;line-height:1;margin-top:10px;font-variant-numeric:tabular-nums}
+.big small{font-size:22px;margin-left:6px}
+.stamp{display:inline-block;margin-top:14px;border:3px solid var(--red);color:var(--red);background:transparent;transform:rotate(-5deg);padding:2px 12px;border-radius:8px;font-weight:800}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kv div{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:10px 14px}
+.kv span{display:block;font-size:13px;color:var(--sub)}.kv b{font-size:24px;white-space:nowrap}
+.back{min-height:44px;padding:0 14px 0 8px;margin:0 0 6px -8px;border:0;background:none;font-weight:800;font-size:16px;color:var(--sub)}
+.top.sm{padding-bottom:16px}.top.sm h1{font-size:30px}
+.menu{display:grid;gap:14px;padding:22px max(5vw,18px) calc(env(safe-area-inset-bottom) + 28px)}
+.card{text-align:left;padding:20px;border-radius:22px;border:2px solid var(--line);background:var(--card);display:grid;grid-template-columns:76px minmax(0,1fr);gap:4px 16px;align-items:center;box-shadow:0 4px 0 var(--line)}
+.card:active{transform:translateY(3px);box-shadow:none}
+.card svg{grid-row:span 2;width:76px;height:76px}
+.card b{font-size:23px;font-weight:800;line-height:1.2}.card span{font-size:14px;color:var(--sub);line-height:1.45}
+.mtype{text-align:center;font-weight:800;color:var(--sub);margin-top:12px;font-size:15px}
+.mst{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:12px 0;min-height:240px}
+.mst .lead{font-weight:800;font-size:18px;text-align:center}
+.digits{font-size:clamp(38px,11vw,62px);font-weight:800;letter-spacing:.1em;font-variant-numeric:tabular-nums;word-break:break-all;text-align:center;line-height:1.2}
+.grid{display:grid;gap:8px;width:min(82vw,330px);aspect-ratio:1}
+.cell{border-radius:12px;background:var(--card);border:2px solid var(--line);padding:0}
+.cell.on{background:var(--y);border-color:var(--y)}.cell.sel{background:var(--sub);border-color:var(--sub)}
+.cell.bad{background:var(--red);border-color:var(--red)}
+.wch{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.w{min-height:50px;padding:0 18px;font-size:20px;border-radius:25px;border:2px solid var(--line);background:var(--card);font-weight:700;display:inline-flex;align-items:center}
+.w.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}.w.ok{background:var(--y);color:var(--yink);border-color:var(--y)}.w.bad{border-color:var(--red);color:var(--red)}
+.story{font-size:19px;line-height:1.85;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:16px 18px;width:100%}
+.chs{display:grid;gap:10px;width:100%}
+.ch{min-height:56px;border-radius:14px;border:2px solid var(--line);background:var(--card);font-size:19px;font-weight:700}
+.ch.ok{background:var(--y);color:var(--yink);border-color:var(--y)}.ch.bad{border-color:var(--red);color:var(--red)}
+.gob{display:block;width:100%;min-height:60px;border:0;border-radius:16px;background:var(--y);color:var(--yink);font-size:21px;font-weight:800}
+.mfb{width:100%;display:flex;flex-direction:column;gap:10px}
+.mfb h3{margin:0;font-size:20px;text-align:center}.mfb h3.ng{color:var(--red)}
+.qq{font-size:21px;font-weight:800;line-height:1.5;text-align:center;text-wrap:balance}
+.mfb p{margin:0;white-space:pre-line;font-size:16px;line-height:1.7;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px 14px}
+.miss{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.miss li{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:8px 14px;font-weight:700;font-variant-numeric:tabular-nums;display:flex;justify-content:space-between}
+.miss li b{color:var(--red)}
+.btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:22px 0 calc(env(safe-area-inset-bottom) + 28px)}
+.btns button{min-height:56px;border-radius:16px;font-weight:800;font-size:18px;border:2px solid var(--line);background:var(--card)}
+.btns .go2{background:var(--y);border-color:var(--y);color:var(--yink)}
+</style>
+</head>
+<body>
+<div id="top" class="view">
+  <header class="top">
+    <h1>あたまドリル</h1>
+    <div class="stat"><span><b id="today">0</b>問 今日</span><span><b id="streak">0</b>日 連続</span></div>
+    <div class="week" id="week" aria-label="この7日間にといた問題数"></div>
+  </header>
+  <div class="menu">
+    <button class="card" data-go="home">
+      <svg viewBox="0 0 76 76" aria-hidden="true"><rect width="76" height="76" rx="18" fill="#7cc4ff"/><g fill="none" stroke="#0b0d10" stroke-width="5" stroke-linecap="round"><path d="M14 22h16M22 14v16M46 22h16M15 47l14 14M29 47L15 61M46 50h16M46 58h16"/></g></svg>
+      <b>計算ドリル</b><span>たし算〜わり算、％、消費税、面積、速さ</span>
+    </button>
+    <button class="card" data-go="mhome">
+      <svg viewBox="0 0 76 76" aria-hidden="true"><rect width="76" height="76" rx="18" fill="#0b0d10" stroke="#2a2e36" stroke-width="2"/><g fill="#7cc4ff"><rect x="13" y="13" width="14" height="14" rx="4"/><rect x="49" y="31" width="14" height="14" rx="4"/><rect x="31" y="49" width="14" height="14" rx="4"/></g><g fill="#ffffff" opacity=".22"><rect x="31" y="13" width="14" height="14" rx="4"/><rect x="49" y="13" width="14" height="14" rx="4"/><rect x="13" y="31" width="14" height="14" rx="4"/><rect x="31" y="31" width="14" height="14" rx="4"/><rect x="13" y="49" width="14" height="14" rx="4"/><rect x="49" y="49" width="14" height="14" rx="4"/></g></svg>
+      <b>記憶力ドリル</b><span>数字・場所・単語・文章を覚える。正解するほどレベルが上がる</span>
+    </button>
+    <button class="card" data-go="qhome">
+      <svg viewBox="0 0 76 76" aria-hidden="true"><rect width="76" height="76" rx="18" fill="#22262d"/><rect x="12" y="14" width="52" height="9" rx="4.5" fill="#eef0f3" opacity=".3"/><rect x="12" y="29" width="52" height="9" rx="4.5" fill="#7cc4ff"/><rect x="12" y="44" width="52" height="9" rx="4.5" fill="#eef0f3" opacity=".3"/><rect x="12" y="59" width="36" height="5" rx="2.5" fill="#eef0f3" opacity=".3"/></svg>
+      <b>常識ドリル</b><span>小学校〜大学・社会人の一般常識を4択で</span>
+    </button>
+  </div>
+</div>
+
+<div id="home" class="view hide">
+  <header class="top sm"><button class="back" data-go="top">← トップ</button><h1>計算ドリル</h1></header>
+  <section><h2>種目</h2><div class="chips" id="ops"></div></section>
+  <section><h2>レベル</h2><div class="chips" id="lvs"></div><p class="note" id="lvnote"></p></section>
+  <section><h2>ルール</h2><div class="rules" id="rules"></div>
+    <button class="go" id="go">はじめる</button>
+    <details><summary>暗算のコツ</summary>
+      <ul class="tips">
+        <li><b>10をつくる</b>：8＋5は「8＋2＋3」。あと何で10になるかをすぐ出せると一気に速くなる。</li>
+        <li><b>ちょうどで引いて戻す</b>：63−28は「63−30＋2」。キリのいい数で引いてから差を足す。</li>
+        <li><b>端数をそろえる</b>：198＋397は「200＋400−5」。金額計算でいちばん効くワザ。</li>
+        <li><b>分けてかける</b>：34×6は「30×6＋4×6」。大きい位から計算して足す。</li>
+        <li><b>わり算はかけ算の逆</b>：96÷8は「8×いくつで96？」と九九で探す。</li>
+        <li><b>10%は1桁ずらす</b>：3,400の10%は340。5%はその半分、20%は倍、25%は4で割る。</li>
+        <li><b>税込10%</b>：「元の数＋その1割」。1,280円なら1,280＋128＝1,408円。</li>
+        <li><b>税込→税抜（10%）</b>：11で割って10倍。3,300円 ÷ 11 × 10 ＝ 3,000円。消費税は11で割った数そのもの。</li>
+        <li><b>税込8%</b>：「元の数＋8%」。8%は10%−2%で出すと楽。税込から税抜は27で割って25倍。</li>
+        <li><b>面積</b>：三角形は「底辺×高さ÷2」、台形は「(上底＋下底)×高さ÷2」。円は 半径×半径×3.14（10×10×3.14＝314 を覚えとく）。</li>
+        <li><b>速さ</b>：「は・じ・き」＝ 距離＝速さ×時間、時間＝距離÷速さ、速さ＝距離÷時間。時速→秒速は÷3.6。</li>
+        <li><b>左から計算する</b>：筆算と逆に大きい位からやると、頭の中で覚えておく数が減る。</li>
+      </ul>
+    </details>
+  </section>
+</div>
+
+<div id="play" class="view hide">
+  <div class="bar"><button class="quit" id="quit">やめる</button><span class="clock" id="clock">1問目</span><span class="score" id="score"></span></div>
+  <div class="prog"><i id="prog"></i></div>
+  <div class="board">
+    <div class="q" id="q"></div>
+    <div class="arow"><div class="ans" id="ans">&nbsp;</div><span class="unit" id="unit"></span></div>
+    <svg class="mark" id="mk" viewBox="0 0 200 200" aria-hidden="true">
+      <path class="o" pathLength="1000" d="M100 20A80 80 0 1 1 99.9 20"/>
+      <path class="x" pathLength="1000" d="M48 48L152 152"/><path class="x" pathLength="1000" d="M152 48L48 152"/>
+    </svg>
+  </div>
+  <div class="exp hide" id="exp"><h3 id="exph"></h3><p id="expt"></p><button id="nextb">次へ</button></div>
+  <div class="pad" id="pad">
+    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+    <button data-k="c" class="fn">クリア</button><button data-k="0">0</button><button data-k="b" class="fn" aria-label="1文字消す">⌫</button>
+  </div>
+</div>
+
+<div id="mhome" class="view hide">
+  <header class="top sm"><button class="back" data-go="top">← トップ</button><h1>記憶力ドリル</h1></header>
+  <section><h2>種目</h2><div class="chips" id="mops"></div><p class="note" id="mnote"></p></section>
+  <section><h2>いまのレベル</h2><div class="kv" id="mlv"></div>
+    <button class="go" id="mgo">10問はじめる</button>
+    <details><summary>覚え方のコツ</summary><ul class="tips" id="mtips"></ul></details>
+  </section>
+</div>
+
+<div id="mem" class="view hide">
+  <div class="bar"><button class="quit" id="mquit">やめる</button><span class="clock" id="mclock"></span><span class="score" id="mscore"></span></div>
+  <div class="prog"><i id="mprog"></i></div>
+  <div class="mtype" id="mtype"></div>
+  <div class="mst" id="mst"></div>
+</div>
+
+<div id="qhome" class="view hide">
+  <header class="top sm"><button class="back" data-go="top">← トップ</button><h1>常識ドリル</h1></header>
+  <section><h2>レベル</h2><div class="chips" id="qlvs"></div><p class="note" id="qnote"></p></section>
+  <section><h2>出し方</h2><div class="chips" id="qmodes"></div>
+    <div class="kv" id="qkv" style="margin-top:16px"></div>
+    <button class="go" id="qgo">はじめる</button>
+  </section>
+</div>
+
+<div id="quiz" class="view hide">
+  <div class="bar"><button class="quit" id="qquit">やめる</button><span class="clock" id="qclock"></span><span class="score" id="qscore"></span></div>
+  <div class="prog"><i id="qprog"></i></div>
+  <div class="mtype" id="qtype"></div>
+  <div class="mst" id="qst"></div>
+</div>
+
+<div id="result" class="view hide">
+  <header class="top"><div id="rlabel" style="font-weight:700"></div><div class="big" id="rbig"></div><div class="stamp hide" id="rbest">自己ベスト更新！</div></header>
+  <section><div class="kv" id="rkv"></div></section>
+  <section><h2>ふりかえり（タップで解説）</h2><ul class="log" id="rmiss"></ul></section>
+  <section><div class="btns"><button id="home2">メニュー</button><button class="go2" id="again">もう一回</button></div></section>
+</div>
+
+<script>
+{
+const $=s=>document.querySelector(s);
+const OPS={add:'+',sub:'−',mul:'×',div:'÷'};
+const OPN={add:'たし算',sub:'ひき算',mul:'かけ算',div:'わり算',mix:'ミックス',pct:'％',tax:'消費税',area:'面積',spd:'速さ'};
+const LVN={add:['1桁＋1桁','2桁＋1桁','2桁＋2桁','3桁＋2桁','3桁＋3桁'],
+ sub:['くり下がり入門','2桁−1桁','2桁−2桁','3桁−2桁','3桁−3桁'],
+ mul:['九九','2桁×1桁（〜29）','2桁×1桁','2桁×2桁（10台）','2桁×2桁'],
+ div:['九九のぎゃく','2桁÷1桁','3桁÷1桁','÷2桁（10台）','3桁÷2桁'],
+ pct:['10%・25%・50%','○割（20〜90%）','5%きざみ','何％？を求める','○%引き・○%増し'],
+ tax:['税抜→税込（10%）','税抜→税込（8%）','税込→税抜（10%）','税込から消費税額','税込→税抜（8%・10%）'],
+ area:['長方形','三角形','台形・平行四辺形','円（×3.14）','切り取った形'],
+ spd:['距離を求める','時間を求める','速さを求める','「分」を使う','時速⇔秒速・分速'],
+ mix:['4種まぜて・かんたん','4種まぜて・ふつう','4種まぜて・やや難','4種まぜて・難しい','4種まぜて・達人']};
+const RU={t10:['10問ドリル','10問で何問正解できるか'],t20:['20問ドリル','20問で何問正解できるか'],
+ free:['じっくり練習','時間制限なし。毎問 解説つき'],review:['苦手復習','まちがえた問題だけ出る']};
+const RG={add:[[2,9,2,9],[10,99,2,9],[10,99,10,99],[100,999,10,99],[100,999,100,999]],
+ sub:[[2,9,2,9],[10,89,2,9],[10,49,10,49],[100,899,10,99],[100,499,100,499]],
+ mul:[[2,9,2,9],[11,29,2,9],[12,99,2,9],[11,19,11,19],[12,99,11,99]]};
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+function gen(op,lv){
+  if(op==='mix')op=['add','sub','mul','div'][rnd(0,3)];
+  if(op==='pct')return pct(lv);
+  if(op==='tax')return tax(lv);
+  if(op==='area')return area(lv);
+  if(op==='spd')return spd(lv);
+  let b,y;
+  if(op==='div'){
+    if(lv===1){b=rnd(2,9);y=rnd(2,9)}
+    else if(lv===2){b=rnd(2,9);y=rnd(10,Math.floor(99/b))}
+    else if(lv===3){b=rnd(2,9);y=rnd(Math.ceil(100/b),99)}
+    else if(lv===4){b=rnd(11,19);y=rnd(2,9)}
+    else{b=rnd(11,29);y=rnd(10,34)}
+    return {a:b*y,op,b,ans:y};
+  }
+  const g=RG[op][lv-1],x=rnd(g[0],g[1]);y=rnd(g[2],g[3]);
+  if(op==='add')return {a:x,op,b:y,ans:x+y};
+  if(op==='sub')return {a:x+y,op,b:y,ans:x};
+  return {a:x,op,b:y,ans:x*y};
+}
+const yen=n=>n.toLocaleString('ja-JP');
+function pctOf(n,p){
+  const f=yen,a=n*p/100;
+  if(p===50)return `50%は半分。\n${f(n)}÷2＝${f(a)}`;
+  if(p===25)return `25%は4で割る。\n${f(n)}÷4＝${f(a)}`;
+  if(p===10)return `10%は1桁ずらす。\n${f(n)} → ${f(a)}`;
+  if(p%10===0)return `まず10%（1桁ずらす）：${f(n/10)}\n${p}%はその${p/10}倍：${f(n/10)}×${p/10}＝${f(a)}`;
+  if(p===5)return `10%（1桁ずらす）：${f(n/10)}\n5%はその半分：${f(a)}`;
+  return `${p}%＝${p-5}%＋5% に分ける。\n10%：${f(n/10)}　5%（その半分）：${f(n/20)}\n${p-5}%：${f(n/10)}×${(p-5)/10}＝${f(n*(p-5)/100)}\n${f(n*(p-5)/100)}＋${f(n/20)}＝${f(a)}`;
+}
+function pct(lv){
+  const op='pct',f=yen;let n,p;
+  if(lv<=3){
+    if(lv===1){p=[10,50,25,20][rnd(0,3)];n=rnd(1,30)*100}
+    else if(lv===2){p=rnd(2,9)*10;n=rnd(2,50)*10}
+    else{p=rnd(1,19)*5;n=rnd(2,60)*20}
+    return {op,t:`${f(n)} の ${p}%`,u:'',ans:n*p/100,e:pctOf(n,p)};
+  }
+  if(lv===4){p=[5,10,15,20,25,30,40,50,60,75,80,120,150][rnd(0,12)];n=rnd(2,50)*20;const part=n*p/100;
+    return {op,t:`${f(part)} は ${f(n)} の何％？`,u:'%',ans:p,e:`割合＝くらべる量÷もとの量。\n${f(part)}÷${f(n)}＝${p/100}\n×100 して ${p}%`}}
+  p=rnd(1,8)*5;n=rnd(10,100)*100;const up=Math.random()<.3,d=n*p/100,ans=up?n+d:n-d;
+  return {op,t:`${f(n)}円 の ${p}%${up?'増し':'引き'}`,u:'円',ans,
+    e:`まず${p}%を出す：\n${pctOf(n,p)}\n${up?'足す':'引く'}：${f(n)}${up?'＋':'−'}${f(d)}＝${f(ans)}\n（別解：${up?100+p:100-p}%を出しても同じ）`};
+}
+function tax(lv){
+  const op='tax',f=yen,ten=()=>rnd(5,500)*10,eig=()=>rnd(2,120)*50;let p;
+  const in10=p=>`税込（10%）＝税抜＋その1割。\n${f(p)}の10%：${f(p/10)}\n${f(p)}＋${f(p/10)}＝${f(p*11/10)}`;
+  const in8=p=>`8%＝10%−2% で出す。\n10%：${f(p/10)}　2%：${f(p/50)}\n消費税：${f(p/10)}−${f(p/50)}＝${f(p*2/25)}\n${f(p)}＋${f(p*2/25)}＝${f(p*27/25)}`;
+  const out10=p=>`税込÷1.1＝「11で割って10倍」。\n${f(p*11/10)}÷11＝${f(p/10)}\n×10 して ${f(p)}`;
+  const out8=p=>`税込÷1.08＝「27で割って25倍」。\n${f(p*27/25)}÷27＝${f(p/25)}\n×25 して ${f(p)}`;
+  if(lv===1){p=ten();return {op,t:`税抜 ${f(p)}円 → 税込（10%）`,u:'円',ans:p*11/10,e:in10(p)}}
+  if(lv===2){p=eig();return {op,t:`税抜 ${f(p)}円 → 税込（8%）`,u:'円',ans:p*27/25,e:in8(p)}}
+  if(lv===3){p=ten();return {op,t:`税込 ${f(p*11/10)}円 → 税抜（10%）`,u:'円',ans:p,e:out10(p)}}
+  if(lv===4){
+    if(Math.random()<.5){p=ten();return {op,t:`税込 ${f(p*11/10)}円 の消費税（10%）`,u:'円',ans:p/10,e:`10%の消費税＝税込÷11。\n${f(p*11/10)}÷11＝${f(p/10)}\n（税込は110%、税は10%。110÷10＝11）`}}
+    p=eig();return {op,t:`税込 ${f(p*27/25)}円 の消費税（8%）`,u:'円',ans:p*2/25,e:`8%の消費税＝税込÷27×2。\n${f(p*27/25)}÷27＝${f(p/25)}\n×2 して ${f(p*2/25)}\n（税込は108%、税は8%。108:8＝27:2）`};
+  }
+  if(Math.random()<.5){p=eig();return {op,t:`税込 ${f(p*27/25)}円 → 税抜（8%）`,u:'円',ans:p,e:out8(p)}}
+  p=ten();return {op,t:`税込 ${f(p*11/10)}円 → 税抜（10%）`,u:'円',ans:p,e:out10(p)};
+}
+function area(lv){
+  const op='area',f=yen;
+  if(lv===1){const h=rnd(3,15),w=rnd(3,20);return {op,t:`縦${h}cm・横${w}cm の長方形の面積`,u:'cm²',ans:h*w,e:`長方形＝縦×横\n${h}×${w}＝${h*w}`}}
+  if(lv===2){let b=rnd(3,20);const h=rnd(2,15);if(b*h%2)b++;
+    return {op,t:`底辺${b}cm・高さ${h}cm の三角形の面積`,u:'cm²',ans:b*h/2,e:`三角形＝底辺×高さ÷2\n${b}×${h}＝${b*h}\n÷2 して ${b*h/2}\n（コツ：先に偶数の方を2で割ると楽）`}}
+  if(lv===3){
+    if(Math.random()<.35){const b=rnd(4,25),h=rnd(3,15);return {op,t:`底辺${b}cm・高さ${h}cm の平行四辺形の面積`,u:'cm²',ans:b*h,e:`平行四辺形＝底辺×高さ（÷2はいらない）\n${b}×${h}＝${b*h}`}}
+    const a=rnd(2,12),b=rnd(a+2,20);let h=rnd(2,12);if((a+b)*h%2)h++;const s=a+b;
+    return {op,t:`上底${a}cm・下底${b}cm・高さ${h}cm の台形の面積`,u:'cm²',ans:s*h/2,e:`台形＝(上底＋下底)×高さ÷2\n${a}＋${b}＝${s}\n${s}×${h}＝${s*h}\n÷2 して ${s*h/2}`}}
+  if(lv===4){const k=rnd(1,5),r=k*10;return {op,t:`半径${r}cm の円の面積（円周率3.14）`,u:'cm²',ans:314*k*k,
+    e:`円＝半径×半径×3.14\n${r}×${r}＝${f(r*r)}\n${f(r*r)}×3.14＝${f(314*k*k)}\n（コツ：100×3.14＝314。${f(r*r)}は100の${k*k}倍 → 314×${k*k}）`}}
+  const W=rnd(8,20),H=rnd(8,20),w=rnd(2,W-3),h=rnd(2,H-3),A=W*H-w*h;
+  return {op,t:`縦${H}m・横${W}m の土地から、縦${h}m・横${w}m の角を切り取った残りの面積`,u:'m²',ans:A,e:`全体から切り取った分を引く。\n全体：${H}×${W}＝${H*W}\n切り取り：${h}×${w}＝${h*w}\n${H*W}−${h*w}＝${A}`};
+}
+function spd(lv){
+  const op='spd',f=yen;
+  if(lv===1){const v=rnd(2,9)*10,t=rnd(2,6);return {op,t:`時速${v}km で ${t}時間 走った距離`,u:'km',ans:v*t,e:`距離＝速さ×時間（は・じ・き の「は」）\n${v}×${t}＝${v*t}`}}
+  if(lv===2){const v=rnd(3,10)*10,t=rnd(2,6),d=v*t;return {op,t:`${d}km を時速${v}km で走るとかかる時間`,u:'時間',ans:t,e:`時間＝距離÷速さ\n${d}÷${v}＝${t}`}}
+  if(lv===3){const v=rnd(3,12)*5,t=rnd(2,6),d=v*t;return {op,t:`${d}km を ${t}時間 で走った。時速は？`,u:'km',ans:v,e:`速さ＝距離÷時間\n${d}÷${t}＝${v}`}}
+  if(lv===4){let v,m;do{v=[30,36,40,45,48,60,72,80,90,120][rnd(0,9)];m=[10,15,20,30,40,45,50,90][rnd(0,7)]}while(v*m%60);const d=v*m/60;
+    if(Math.random()<.5)return {op,t:`時速${v}km で ${m}分 走った距離`,u:'km',ans:d,e:(()=>{const g=(x,y)=>y?g(y,x%y):x,k=g(m,60),n=m/k,dd=60/k;return `分を時間になおす：${m}分＝${n}/${dd}時間\n距離＝${v}×${n}/${dd}\n${v}÷${dd}＝${v/dd}、×${n} で ${d}`})()};
+    return {op,t:`${d}km を時速${v}km で走ると何分？`,u:'分',ans:m,e:`時間＝距離÷速さ＝${d}÷${v}時間\n分にするには×60：${d}×60÷${v}＝${m}`}}
+  if(Math.random()<.5){const v=18*rnd(1,6);return {op,t:`時速${v}km は 秒速何m？`,u:'m',ans:v*5/18,e:`時速→秒速は ÷3.6\n${v}÷3.6＝${v*5/18}\n（×1000でm、÷3600で秒。1000÷3600＝1÷3.6）`}}
+  const m=rnd(1,20)*50;return {op,t:`分速${m}m は 時速何km？`,u:'km',ans:m*60/1000,e:`分速×60＝1時間に進むm\n${m}×60＝${f(m*60)}m\n÷1000 して ${m*60/1000}km`};
+}
+function bexp(q){
+  const {a,b,ans}=q,f=yen;
+  if(q.op==='add'){
+    if(a<10&&b<10){if(ans<10)return `${a}＋${b}＝${ans}`;const k=10-a;return `${a}はあと${k}で10。\n${b}を${k}と${b-k}に分ける。\n${a}＋${k}＝10、10＋${b-k}＝${ans}`}
+    const o=b%10,t=b-o;
+    if(o>=7&&b>=10){const R=b+10-o;return `${b}を「${R}−${10-o}」と考える。\n${f(a)}＋${R}＝${f(a+R)}\n${f(a+R)}−${10-o}＝${f(ans)}`}
+    if(b<10){const u=a%10;return `一の位どうし：${u}＋${b}＝${u+b}\n${f(a-u)}＋${u+b}＝${f(ans)}`}
+    return o?`大きい位から足す。\n${f(a)}＋${t}＝${f(a+t)}\n${f(a+t)}＋${o}＝${f(ans)}`:`${f(a)}＋${t}＝${f(ans)}`;
+  }
+  if(q.op==='sub'){
+    const chk=`\n確認：${f(ans)}＋${f(b)}＝${f(a)}`;
+    if(b<10){if(a%10>=b)return `一の位：${a%10}−${b}＝${a%10-b}\n→ ${f(ans)}${chk}`;
+      return `${b}を引くかわりに、10を引いて${10-b}を足す。\n${f(a)}−10＝${f(a-10)}\n${f(a-10)}＋${10-b}＝${f(ans)}${chk}`}
+    const o=b%10,t=b-o;
+    if(o>=6){const R=b+10-o;return `${b}を「${R}−${10-o}」と考える。\n${f(a)}−${R}＝${f(a-R)}\n引きすぎた${10-o}を戻す：${f(a-R)}＋${10-o}＝${f(ans)}${chk}`}
+    return (o?`大きい位から引く。\n${f(a)}−${t}＝${f(a-t)}\n${f(a-t)}−${o}＝${f(ans)}`:`${f(a)}−${t}＝${f(ans)}`)+chk;
+  }
+  if(q.op==='mul'){
+    if(a<10&&b<10)return `九九の${a}の段：${a}×${b}＝${ans}`;
+    if(b<10){const o=a%10,t=a-o;return o?`${a}を${t}と${o}に分ける。\n${t}×${b}＝${t*b}\n${o}×${b}＝${o*b}\n${t*b}＋${o*b}＝${f(ans)}`:`${t/10}×${b}＝${t/10*b} → 0をつけて ${f(ans)}`}
+    if(a<20&&b<20)return `10台どうしのワザ：\n${a}＋${b%10}＝${a+b%10} → ×10 で ${(a+b%10)*10}\n一の位どうし：${a%10}×${b%10}＝${a%10*(b%10)}\n${(a+b%10)*10}＋${a%10*(b%10)}＝${ans}`;
+    const bo=b%10,bt=b-bo;return bo?`${b}を${bt}と${bo}に分ける。\n${a}×${bt}＝${f(a*bt)}\n${a}×${bo}＝${f(a*bo)}\n${f(a*bt)}＋${f(a*bo)}＝${f(ans)}`:`${a}×${bt/10}＝${f(a*bt/10)} → 0をつけて ${f(ans)}`;
+  }
+  if(q.op==='div'){
+    const chk=`\n確認：${b}×${ans}＝${f(a)}`;
+    if(ans<10)return `${b}×□＝${f(a)} を探す。\n${b}×${ans}＝${f(a)} → 答え ${ans}`;
+    const U=ans%10,T=ans-U;
+    return (U?`${f(a)}を ${f(b*T)} と ${f(b*U)} に分ける（どちらも${b}で割り切れる）。\n${f(b*T)}÷${b}＝${T}\n${f(b*U)}÷${b}＝${U}\n${T}＋${U}＝${ans}`:`${f(a)}÷${b}：${b}×${T}＝${f(b*T)}`)+chk;
+  }
+  return '';
+}
+const expOf=q=>q.e||bexp(q);
+const qt=q=>q.t||`${q.a} ${OPS[q.op]} ${q.b}`;
+let S={best:{},days:{},miss:[],sel:{op:'add',lv:1,rule:'t10'}};
+try{const t=JSON.parse(localStorage.getItem('anzan1')||'null');if(t)S={...S,...t}}catch(e){}
+const save=()=>{try{localStorage.setItem('anzan1',JSON.stringify(S))}catch(e){}};
+const sel=S.sel;if(!RU[sel.rule])sel.rule='t10';
+const dk=d=>d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+const qid=q=>q.t||(q.a+q.op+q.b);
+const fmt=s=>{const m=Math.floor(s/60),r=s%60;return m?`${m}:${r<10?'0':''}${r.toFixed(1)}`:r.toFixed(1)+'秒'};
+function streak(){const d=new Date();let n=0;if(!S.days[dk(d)])d.setDate(d.getDate()-1);while(S.days[dk(d)]){n++;d.setDate(d.getDate()-1)}return n}
+function bestText(rule){
+  const v=S.best[sel.op+'-'+sel.lv+'-'+rule];
+  if(rule==='t10'||rule==='t20')return v?`ベスト ${v} / ${rule==='t10'?10:20}問`:'まだ記録なし';
+  if(rule==='review')return S.miss.length?S.miss.length+'問たまってる':'今はなし';
+  return 'いつでもOK';
+}
+function renderTop(){
+  const now=new Date();
+  $('#today').textContent=S.days[dk(now)]||0;$('#streak').textContent=streak();
+  const w=[...Array(7)].map((_,i)=>{const d=new Date(now);d.setDate(now.getDate()-6+i);return {c:S.days[dk(d)]||0,l:'日月火水木金土'[d.getDay()]}});
+  const mx=Math.max(20,...w.map(x=>x.c));
+  $('#week').innerHTML=w.map((x,i)=>`<div class="${i===6?'t':''}" title="${x.c}問"><span class="b"><i style="height:${x.c/mx*100}%"></i></span>${x.l}</div>`).join('');
+}
+function renderHome(){
+  $('#ops').innerHTML=Object.keys(OPN).map(k=>`<button class="chip" data-op="${k}" aria-pressed="${sel.op===k}">${OPN[k]}</button>`).join('');
+  $('#lvs').innerHTML=[1,2,3,4,5].map(n=>`<button class="chip" data-lv="${n}" aria-pressed="${sel.lv===n}">Lv${n}</button>`).join('');
+  const ex=gen(sel.op,sel.lv);
+  $('#lvnote').textContent=`${LVN[sel.op][sel.lv-1]}　例：${qt(ex)}`;
+  $('#rules').innerHTML=Object.keys(RU).map(k=>`<button class="rule" data-rule="${k}" aria-pressed="${sel.rule===k}"><b>${RU[k][0]}</b><span>${RU[k][1]}</span><em>${bestText(k)}</em></button>`).join('');
+  const nr=sel.rule==='review'&&!S.miss.length;
+  $('#go').disabled=nr;$('#go').textContent=nr?'復習する問題がまだないで':'はじめる';
+}
+$('#home').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.op)sel.op=b.dataset.op;else if(b.dataset.lv)sel.lv=+b.dataset.lv;else if(b.dataset.rule)sel.rule=b.dataset.rule;else return;
+  save();renderHome();
+});
+let back='home',again=()=>start();
+function show(v){['top','home','play','mhome','mem','qhome','quiz','result'].forEach(id=>$('#'+id).classList.toggle('hide',id!==v));if(v==='top')renderTop();if(v==='home')renderHome();if(v==='mhome')renderMHome();if(v==='qhome')renderQHome();try{window.scrollTo(0,0)}catch(e){}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)show(b.dataset.go)});
+let G=null;
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rnd(0,i);[a[i],a[j]]=[a[j],a[i]]}return a}
+function start(){
+  back='home';again=()=>start();
+  if(sel.rule==='review'&&!S.miss.length)return;
+  G={done:0,ok:0,ng:0,pen:0,log:[],in:'',lock:false,t0:performance.now(),last:'',list:sel.rule==='review'?shuffle(S.miss.slice()):null};
+  G.total=sel.rule==='t10'?10:sel.rule==='t20'?20:G.list?G.list.length:0;
+  show('play');next();
+}
+function next(){
+  if(!G)return;
+  G.lock=false;G.in='';G.wait=false;$('#mk').classList.remove('on');
+  $('#exp').classList.add('hide');$('#pad').classList.remove('hide');
+  if(G.list){if(!G.list.length)return finish();G.q={...G.list.pop()}}
+  else{let q;do{q=gen(sel.op,sel.lv)}while(qid(q)===G.last);G.q=q}
+  G.last=qid(G.q);
+  $('#q').textContent=qt(G.q);$('#q').classList.toggle('long',!!G.q.t);$('#unit').textContent=G.q.u||'';draw();tick();
+}
+function draw(){const a=$('#ans');a.className='ans';a.textContent=G.in||' '}
+function tick(){
+  if(!G)return;
+  $('#clock').textContent=(G.done+1)+'問目';$('#prog').style.width=G.total?(G.done/G.total*100)+'%':'0';
+  $('#score').textContent=G.total?G.done+' / '+G.total:'正解 '+G.ok;
+}
+function press(k){
+  if(!G||G.lock)return;
+  if(k==='b')G.in=G.in.slice(0,-1);else if(k==='c')G.in='';else if(G.in.length<7)G.in+=k;
+  draw();
+  if(G.in.length===String(G.q.ans).length)judge();
+}
+function mark(t){const m=$('#mk');m.classList.remove('on');m.dataset.t=t;void m.getBoundingClientRect();m.classList.add('on')}
+function judge(){
+  G.lock=true;G.done++;
+  const k=dk(new Date());S.days[k]=(S.days[k]||0)+1;
+  const q=G.q,id=qid(q),ok=+G.in===q.ans;
+  G.log.push({q,ok,inp:G.in});
+  if(ok){
+    G.ok++;if(G.list)S.miss=S.miss.filter(m=>qid(m)!==id);
+    mark('o');
+    if(sel.rule==='free')showExp(q,true);else G.to=setTimeout(after,260);
+  }else{
+    G.ng++;
+    if(!S.miss.some(m=>qid(m)===id)){S.miss.push({...q});if(S.miss.length>60)S.miss.shift()}
+    mark('x');const a=$('#ans');a.className='ans ng';a.innerHTML=`<s>${G.in}</s>${q.ans}`;
+    showExp(q,false);
+  }
+  save();
+}
+function showExp(q,ok){
+  const h=$('#exph');h.textContent=ok?'正解！ 解説':`答えは ${yen(q.ans)}${q.u||''}`;h.className=ok?'':'ng';
+  $('#expt').textContent=expOf(q);
+  $('#pad').classList.add('hide');$('#exp').classList.remove('hide');G.wait=true;
+}
+$('#nextb').addEventListener('click',()=>{if(G&&G.wait)after()});
+function after(){if(!G)return;if(G.total&&!G.list&&G.done>=G.total)return finish();next()}
+function stop(){clearInterval(G.iv);clearTimeout(G.to)}
+function finish(){
+  if(!G)return;stop();
+    const key=sel.op+'-'+sel.lv+'-'+sel.rule;let big,unit='',nb=false;
+  big=G.ok;unit=`問正解 / ${G.done}問`;
+  if((sel.rule==='t10'||sel.rule==='t20')&&G.ok>0&&G.ok>(S.best[key]||0)){S.best[key]=G.ok;nb=true}
+  save();
+  $('#rlabel').textContent=`${OPN[sel.op]} Lv${sel.lv} ・ ${RU[sel.rule][0]}`;
+  $('#rbig').innerHTML=`${big}<small>${unit}</small>`;
+  $('#rbest').classList.toggle('hide',!nb);
+  const acc=G.done?Math.round(G.ok/G.done*100):0;
+  $('#rkv').innerHTML=[['正答率',acc+'%'],['まちがい',G.ng+'問'],['といた数',G.done+'問'],['今日の合計',(S.days[dk(new Date())]||0)+'問']]
+    .map(x=>`<div><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
+  const lg=G.log.slice().sort((x,y)=>x.ok-y.ok);
+  $('#rmiss').innerHTML=lg.length?lg.map(r=>`<li class="${r.ok?'':'ng'}"><details><summary><span><i>${r.ok?'◯':'✕'}</i>${qt(r.q)}</span><b>${yen(r.q.ans)}${r.q.u||''}</b></summary><p>${r.ok?'':'自分の答え：'+r.inp+'\n'}${expOf(r.q)}</p></details></li>`).join(''):'<li><p>まだ1問もといてへんで</p></li>';
+  G=null;show('result');
+}
+$('#quit').addEventListener('click',()=>{
+  if(!G)return;
+  if((sel.rule==='free'||sel.rule==='review')&&G.done>0)return finish();
+  stop();G=null;show('home');
+});
+$('#pad').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();press(b.dataset.k)});
+document.addEventListener('keydown',e=>{
+  if(!G)return;
+  if(G.wait){if(e.key==='Enter'||e.key===' '){e.preventDefault();after()}return}
+  if(/^[0-9]$/.test(e.key))press(e.key);else if(e.key==='Backspace')press('b');else if(e.key==='Escape')$('#quit').click();
+});
+$('#go').addEventListener('click',start);
+$('#again').addEventListener('click',()=>again());
+$('#home2').addEventListener('click',()=>show(back));
+const MT={mix:'おまかせ',digits:'数字',rev:'逆から数字',grid:'場所',words:'単語',story:'文章'};
+const MD={mix:'5種類がランダムに出る',digits:'数字の並びを覚えて、そのまま入力',rev:'数字を覚えて、逆の順番で入力',grid:'光ったマスの場所を覚えてタップ',words:'単語を覚えて、出てきたものを選ぶ',story:'短い文章を読んで、内容の質問に答える'};
+const MB={digits:[3,14],rev:[2,10],grid:[2,10],words:[3,9],story:[1,3]};
+const MU={digits:'桁',rev:'桁',grid:'マス',words:'語',story:''};
+const TIP={digits:'3〜4桁ずつ区切って覚える（電話番号と同じ）。例：0482931 → 048・29・31',
+ rev:'まず3桁ずつ区切って覚え、最後の区切りから後ろ向きに読む',
+ grid:'形にして覚える（L字・ななめ・三角など）。「上の段に2つ、右下に1つ」と言葉にするのも効く',
+ words:'単語をつないで変な話にする。例：「ねこ」「傘」「電車」→ ねこが傘をさして電車に乗る',
+ story:'「いつ・どこで・だれが・何を・いくつ」の5つを意識して読む'};
+const WORDS='りんご 電車 傘 時計 ねこ 鉛筆 海 帽子 ピアノ 自転車 ハサミ 太陽 ノート 机 バナナ 財布 手紙 カメラ 椅子 花火 くつ 犬 山 冷蔵庫 メガネ 新聞 ケーキ 信号 ほうき 鏡 タオル 牛乳 飛行機 かぎ ふとん 雪だるま 金魚 ギター 地図 はがき 消しゴム 時刻表 ハンドル 封筒 電卓 ぶどう 雨 ラーメン ボール 窓 ろうそく 風船 ホッチキス ポスト トマト 灯台 カレンダー 切手 しょうゆ 黒板'.split(' ');
+const NAMES=['田中さん','佐藤さん','鈴木さん','高橋さん','伊藤さん','山本さん','中村さん','小林さん','加藤さん','吉田さん'];
+const DAYS=['月曜日','火曜日','水曜日','木曜日','金曜日','土曜日','日曜日'];
+const PLACES=['駅前のスーパー','コンビニ','郵便局','銀行','本屋','ホームセンター','ドラッグストア','パン屋','市役所','文房具屋'];
+const ITEMS=[['りんご','個'],['牛乳','本'],['卵','パック'],['ノート','冊'],['電池','パック'],['パン','個'],['封筒','束'],['ボールペン','本'],['トマト','個'],['お茶','本']];
+const PAYS=['現金','クレジットカード','電子マネー','QRコード決済'];
+const pk=a=>a[rnd(0,a.length-1)];
+const tm=()=>{const m=pk([0,15,30,45]);return `${rnd(8,19)}時${m?m+'分':''}`};
+if(!S.mem)S.mem={lv:{},best:{}};
+for(const k in MB)if(!S.mem.lv[k])S.mem.lv[k]=MB[k][0]+(k==='digits'?1:0);
+if(!S.msel)S.msel='mix';
+function story(lv){
+  const nm=shuffle(NAMES.slice()),name=nm[0],fr=nm[1],day=pk(DAYS),pl=pk(PLACES),it=shuffle(ITEMS.slice()),i1=it[0],i2=it[1];
+  const n1=rnd(2,9);let n2=rnd(2,9);while(n2===n1)n2=rnd(2,9);const t=tm(),pay=pk(PAYS),cnt=u=>[2,3,4,5,6,7,8,9].map(n=>n+u);
+  let txt;const qs=[['何曜日に行った？',day,DAYS],['どこへ行った？',pl,PLACES],[`${i1[0]}はいくつ買った？`,n1+i1[1],cnt(i1[1])]];
+  if(lv===1){txt=`${name}は${day}に${pl}へ行って、${i1[0]}を${n1}${i1[1]}買いました。`;qs.push(['行ったのは誰？',name,NAMES])}
+  else{
+    txt=`${name}は${day}の${t}に${pl}へ行って、${i1[0]}を${n1}${i1[1]}と、${i2[0]}を${n2}${i2[1]}買いました。`;
+    const ts=[t];while(ts.length<6){const x=tm();if(!ts.includes(x))ts.push(x)}
+    qs.push(['何時に行った？',t,ts],[`${i2[0]}はいくつ買った？`,n2+i2[1],cnt(i2[1])],[`${n1}${i1[1]}買ったものは？`,i1[0],ITEMS.map(x=>x[0]).filter(x=>x!==i2[0])]);
+    if(lv>=3){txt+=`支払いは${pay}でした。帰り道で${fr}に会い、${pk(['天気','仕事','野球','晩ごはん'])}の話をしました。`;
+      qs.push(['支払い方法は？',pay,PAYS],['帰りに会ったのは誰？',fr,NAMES.filter(x=>x!==fr&&x!==name).concat([name])],['買い物に行ったのは誰？',name,NAMES])}
+  }
+  const q=lv>=3?pk(qs.slice(2)):pk(qs);
+  const ch=shuffle([q[1],...shuffle(q[2].filter(x=>x!==q[1])).slice(0,3)]);
+  return {text:txt,q:q[0],ans:q[1],ch};
+}
+function mgen(type){
+  const lv=S.mem.lv[type],q={type,lv};
+  if(type==='digits'||type==='rev'){let s=String(rnd(1,9));while(s.length<lv)s+=rnd(0,9);q.show=s;q.ans=type==='rev'?[...s].reverse().join(''):s}
+  else if(type==='grid'){q.n=lv<=3?3:lv<=6?4:5;q.cells=shuffle([...Array(q.n*q.n).keys()]).slice(0,lv)}
+  else if(type==='words'){const ws=shuffle(WORDS.slice());q.pick=ws.slice(0,lv);q.cand=shuffle(ws.slice(0,lv*2))}
+  else Object.assign(q,story(lv));
+  return q;
+}
+const lvT=(k,v)=>k==='story'?'Lv'+v:v+MU[k];
+const chunk=s=>s.replace(/(\d{3})(?=\d)/g,'$1 ');
+let M=null;
+function renderMHome(){
+  $('#mops').innerHTML=Object.keys(MT).map(k=>`<button class="chip" data-mop="${k}" aria-pressed="${S.msel===k}">${MT[k]}</button>`).join('');
+  $('#mnote').textContent=MD[S.msel];
+  $('#mlv').innerHTML=Object.keys(MB).map(k=>`<div><span>${MT[k]}　最高 ${S.mem.best[k]?lvT(k,S.mem.best[k]):'−'}</span><b>${lvT(k,S.mem.lv[k])}</b></div>`).join('');
+  $('#mtips').innerHTML=Object.keys(TIP).map(k=>`<li><b>${MT[k]}</b>：${TIP[k]}</li>`).join('');
+}
+$('#mops').addEventListener('click',e=>{const b=e.target.closest('[data-mop]');if(!b)return;S.msel=b.dataset.mop;save();renderMHome()});
+function mstart(){
+  back='mhome';again=()=>mstart();
+  M={i:0,ok:0,log:[],nb:new Set()};show('mem');mnext();
+}
+$('#mgo').addEventListener('click',mstart);
+function mnext(){
+  if(M.i>=10)return mfinish();
+  const type=S.msel==='mix'?pk(Object.keys(MB)):S.msel;
+  M.q=mgen(type);M.ph='show';M.in='';M.sel=[];
+  $('#mclock').textContent=(M.i+1)+'問目';$('#mscore').textContent='正解 '+M.ok;$('#mprog').style.width=(M.i*10)+'%';
+  mdraw();
+}
+const pad=`<div class="pad" style="width:100%">${[7,8,9,4,5,6,1,2,3].map(n=>`<button data-k="${n}">${n}</button>`).join('')}<button data-k="c" class="fn">クリア</button><button data-k="0">0</button><button data-k="b" class="fn" aria-label="1文字消す">⌫</button></div>`;
+function gridHTML(q,mode){
+  return `<div class="grid" style="grid-template-columns:repeat(${q.n},minmax(0,1fr))">${[...Array(q.n*q.n).keys()].map(i=>{
+    let c='cell';const on=q.cells.includes(i),sel=M.sel.includes(i);
+    if(mode==='show'&&on)c+=' on';if(mode==='ask'&&sel)c+=' sel';if(mode==='fb'){if(on)c+=' on';else if(sel)c+=' bad'}
+    return `<button class="${c}" data-cell="${i}" aria-label="マス${i+1}"></button>`}).join('')}</div>`;
+}
+function mdraw(){
+  const q=M.q,st=$('#mst'),ph=M.ph;
+  $('#mtype').textContent=`${MT[q.type]}　${lvT(q.type,q.lv)}`;
+  let h='';
+  if(ph==='show'){
+    const lead={digits:'この数字を覚えて',rev:'この数字を覚えて（あとで逆から答える）',grid:'光ったマスを覚えて',words:'この単語を覚えて',story:'この文章を読んで覚えて'}[q.type];
+    h=`<div class="lead">${lead}</div>`;
+    if(q.type==='digits'||q.type==='rev')h+=`<div class="digits">${q.show}</div>`;
+    else if(q.type==='grid')h+=gridHTML(q,'show');
+    else if(q.type==='words')h+=`<div class="wch">${q.pick.map(w=>`<span class="w">${w}</span>`).join('')}</div>`;
+    else h+=`<div class="story">${q.text}</div>`;
+    h+=`<button class="gob" data-act="done">覚えた！</button>`;
+  }else if(ph==='ask'){
+    if(q.type==='digits'||q.type==='rev')h=`<div class="lead">${q.type==='rev'?'逆から入力':'そのまま入力'}（${q.lv}桁）</div><div class="ans">${M.in||' '}</div>${pad}`;
+    else if(q.type==='grid')h=`<div class="lead">光ったマスをタップ（${M.sel.length} / ${q.lv}）</div>${gridHTML(q,'ask')}`;
+    else if(q.type==='words')h=`<div class="lead">出てきた単語を${q.lv}つ選ぶ（${M.sel.length} / ${q.lv}）</div><div class="wch">${q.cand.map((w,i)=>`<button class="w${M.sel.includes(i)?' sel':''}" data-w="${i}">${w}</button>`).join('')}</div>`;
+    else h=`<div class="lead">${q.q}</div><div class="chs">${q.ch.map((c,i)=>`<button class="ch" data-ch="${i}">${c}</button>`).join('')}</div>`;
+  }else{
+    const r=M.log[M.log.length-1];
+    h=`<div class="mfb"><h3 class="${r.ok?'':'ng'}">${r.ok?'◯ 正解！':'✕ ざんねん'}</h3>`;
+    if(q.type==='grid')h+=`<div style="display:flex;justify-content:center">${gridHTML(q,'fb')}</div>`;
+    if(q.type==='words')h+=`<div class="wch">${q.cand.map((w,i)=>{const p=q.pick.includes(w),s=M.sel.includes(i);return `<span class="w${p?' ok':s?' bad':''}">${w}</span>`}).join('')}</div>`;
+    if(q.type==='story')h+=`<div class="chs">${q.ch.map((c,i)=>`<span class="ch${c===q.ans?' ok':M.sel.includes(i)?' bad':''}" style="display:flex;align-items:center;justify-content:center">${c}</span>`).join('')}</div>`;
+    h+=`<p>${mexp(r)}</p><button class="gob" data-act="next">次へ</button></div>`;
+  }
+  st.innerHTML=h;
+}
+function mexp(r){
+  const q=r.q;let t='';
+  if(q.type==='digits'||q.type==='rev')t=`問題：${chunk(q.show)}\n正解：${chunk(q.ans)}\n自分：${r.inp||'−'}`;
+  else if(q.type==='grid')t='黄色が正解のマス。赤は選んだけど違ったマス。';
+  else if(q.type==='words')t=`出てきた単語：${q.pick.join('・')}`;
+  else t=`正解：${q.ans}\n元の文章：${q.text}`;
+  return t+'\n\nコツ：'+TIP[q.type];
+}
+function mjudge(ok,inp){
+  const q=M.q,k=q.type;M.i++;if(ok)M.ok++;
+  const d=dk(new Date());S.days[d]=(S.days[d]||0)+1;
+  M.log.push({q,ok,inp});
+  if(ok){if((S.mem.best[k]||0)<q.lv){S.mem.best[k]=q.lv;M.nb.add(k)}S.mem.lv[k]=Math.min(MB[k][1],q.lv+1)}
+  else S.mem.lv[k]=Math.max(MB[k][0],q.lv-1);
+  save();M.ph='fb';mdraw();
+}
+$('#mst').addEventListener('click',e=>{
+  if(!M)return;const b=e.target.closest('button');if(!b)return;const q=M.q;
+  if(b.dataset.act==='done'){M.ph='ask';return mdraw()}
+  if(b.dataset.act==='next')return mnext();
+  if(M.ph!=='ask')return;
+  if(b.dataset.cell!=null){const i=+b.dataset.cell;M.sel=M.sel.includes(i)?M.sel.filter(x=>x!==i):M.sel.concat(i);
+    if(M.sel.length===q.lv)return mjudge(M.sel.every(x=>q.cells.includes(x)));return mdraw()}
+  if(b.dataset.w!=null){const i=+b.dataset.w;M.sel=M.sel.includes(i)?M.sel.filter(x=>x!==i):M.sel.concat(i);
+    if(M.sel.length===q.lv)return mjudge(M.sel.every(x=>q.pick.includes(q.cand[x])));return mdraw()}
+  if(b.dataset.ch!=null){const i=+b.dataset.ch;M.sel=[i];return mjudge(q.ch[i]===q.ans)}
+});
+$('#mst').addEventListener('pointerdown',e=>{
+  const b=e.target.closest('[data-k]');if(!b||!M||M.ph!=='ask')return;e.preventDefault();const k=b.dataset.k;
+  if(k==='b')M.in=M.in.slice(0,-1);else if(k==='c')M.in='';else M.in+=k;
+  if(M.in.length===M.q.ans.length)return mjudge(M.in===M.q.ans,M.in);
+  $('#mst .ans').textContent=M.in||' ';
+});
+$('#mquit').addEventListener('click',()=>{if(M&&M.i>0)return mfinish();M=null;show('mhome')});
+function mfinish(){
+  $('#rlabel').textContent=`記憶力ドリル ・ ${MT[S.msel]}`;
+  $('#rbig').innerHTML=`${M.ok}<small>問正解 / ${M.i}問</small>`;
+  $('#rbest').classList.toggle('hide',!M.nb.size);
+  const used=[...new Set(M.log.map(r=>r.q.type))];
+  $('#rkv').innerHTML=used.map(k=>`<div><span>${MT[k]} 次のレベル</span><b>${lvT(k,S.mem.lv[k])}</b></div>`).join('');
+  const lg=M.log.slice().sort((x,y)=>x.ok-y.ok);
+  $('#rmiss').innerHTML=lg.map(r=>{const q=r.q,lab=q.type==='story'?q.q:`${MT[q.type]} ${lvT(q.type,q.lv)}`;
+    return `<li class="${r.ok?'':'ng'}"><details><summary><span><i>${r.ok?'◯':'✕'}</i>${lab}</span></summary><p>${mexp(r)}</p></details></li>`}).join('');
+  M=null;show('result');
+}
+document.addEventListener('keydown',e=>{
+  if(!M)return;
+  if(M.ph!=='ask'){if(e.key==='Enter'){const b=$('#mst .gob');if(b)b.click()}return}
+  const t=M.q.type;if(t!=='digits'&&t!=='rev')return;
+  const k=/^[0-9]$/.test(e.key)?e.key:e.key==='Backspace'?'b':null;if(!k)return;
+  const b=$(`#mst [data-k="${k}"]`);if(b)b.dispatchEvent(new Event('pointerdown',{bubbles:true}));
+});
+
+const QZ=`1|国語|「一石二鳥」の意味は？|一つのことで二つの得をする|二羽の鳥を同時に飼う|石を二つ投げる|一度に二つ失敗する|一つの石で二羽の鳥を落とす、というたとえから。
+1|国語|「猿も木から落ちる」の意味は？|名人でも失敗することがある|猿は木登りが苦手|高いところは危ない|努力すれば必ず報われる|似た意味に「弘法にも筆の誤り」「河童の川流れ」がある。
+1|国語|「急がば回れ」の意味は？|急ぐときほど安全で確実な方法をとる方がよい|急ぐときは近道をする|回り道はムダ|あわてて走り回る|遠回りに見えても、確実な道の方が結局早いという教え。
+1|国語|「石の上にも三年」の意味は？|がまん強く続ければ、いつか成功する|石の上は冷たい|三年たつと何でも忘れる|三年ごとに引っ越すとよい|冷たい石でも三年座ればあたたまる、ということから。
+1|国語|「雨」「雪」「雷」に共通する部首は？|あめかんむり|くさかんむり|うかんむり|たけかんむり|天気に関係する漢字に多い部首。
+1|国語|「休」の部首は？|にんべん|きへん|ぎょうにんべん|てへん|人が木のそばで休んでいる形からできた字。
+1|国語|魚へんに「青」と書く魚は？|鯖（さば）|鮪（まぐろ）|鰯（いわし）|鯛（たい）|鮪はまぐろ、鰯はいわし、鯛はたい。
+1|社会|日本で一番面積が大きい都道府県は？|北海道|岩手県|長野県|新潟県|2位は岩手県。一番小さいのは香川県。
+1|社会|日本で一番面積が小さい都道府県は？|香川県|大阪府|東京都|沖縄県|香川県は約1,877km²。2番目に小さいのは大阪府。
+1|社会|日本で一番人口が多い都道府県は？|東京都|大阪府|神奈川県|愛知県|2位は神奈川県、3位は大阪府。
+1|社会|日本で一番高い山は？|富士山|北岳|槍ヶ岳|御嶽山|富士山は3,776m。2位は南アルプスの北岳。
+1|社会|日本で一番長い川は？|信濃川|利根川|石狩川|木曽川|信濃川は約367km。流域面積が一番広いのは利根川。
+1|社会|日本で一番大きい湖は？|琵琶湖|霞ヶ浦|浜名湖|猪苗代湖|滋賀県の琵琶湖。県の面積の約6分の1をしめる。
+1|社会|都道府県のうち「府」がつくのは？|大阪府と京都府|大阪府だけ|京都府と奈良府|大阪府と兵庫府|日本は1都1道2府43県。
+1|社会|岐阜県の県庁所在地は？|岐阜市|大垣市|高山市|各務原市|ちなみに愛知県は名古屋市、三重県は津市。
+1|理科|水が沸騰する温度は（1気圧で）約何℃？|100℃|50℃|80℃|120℃|凍る温度は0℃。山の上など気圧が低いと100℃より低い温度で沸騰する。
+1|理科|植物が光を使って養分をつくるはたらきは？|光合成|呼吸|蒸散|発芽|二酸化炭素と水からでんぷんなどをつくり、酸素を出す。
+1|理科|昆虫の足は何本？|6本|4本|8本|10本|体は頭・胸・腹の3つに分かれ、足は胸から6本。クモは足が8本で昆虫ではない。
+1|理科|太陽がしずむ方角は？|西|東|南|北|太陽は東からのぼり、南の空を通って西にしずむ。
+1|理科|月が明るく見えるのはなぜ？|太陽の光を反射しているから|月が燃えているから|地球の光を出しているから|星の光を集めているから|満ち欠けは太陽・地球・月の位置関係で起こる。
+1|理科|方位磁針のN極がさす方角は？|北|南|東|西|地球全体が大きな磁石で、北極の近くがS極になっているため。
+1|理科|人の心臓の部屋はいくつ？|4つ|2つ|3つ|6つ|右心房・右心室・左心房・左心室の4つ。
+1|理科|メダカのオスの特徴は？|背びれに切れこみがある|しりびれが小さい|目が大きい|体が赤い|オスはしりびれも大きく、平行四辺形に近い形。
+1|算数|1kmは何m？|1,000m|100m|10,000m|10m|k（キロ）は1,000倍の意味。1kgも1,000g。
+1|算数|三角形の内角の和は？|180°|90°|270°|360°|四角形は360°。
+1|算数|1時間は何秒？|3,600秒|360秒|6,000秒|600秒|60分×60秒＝3,600秒。
+1|算数|1Lは何mL？|1,000mL|100mL|10mL|10,000mL|1dLは100mL。
+1|算数|1m²は何cm²？|10,000cm²|100cm²|1,000cm²|1,000,000cm²|100cm×100cm＝10,000cm²。
+1|算数|時速60kmで走ると、1分で何km進む？|1km|6km|10km|0.6km|60km÷60分＝1km。
+1|生活|救急車を呼ぶ電話番号は？|119|110|118|117|110は警察、118は海上保安庁、117は時報。
+1|生活|自転車は道路のどちら側を走るのが原則？|車道の左側|車道の右側|道の真ん中|どこでもよい|自転車は軽車両なので、車道の左側通行が原則。
+1|生活|歩行者用信号の青が点滅しているとき、正しいのは？|渡り始めない|急いで渡り始める|その場で立ち止まる|車が止まるので安心して渡る|渡っている途中の人は、すばやく渡り終えるか引き返す。
+2|歴史|鎌倉幕府を開いた人物は？|源頼朝|足利尊氏|徳川家康|平清盛|1185年に守護・地頭を置き、1192年に征夷大将軍になった。
+2|歴史|江戸幕府を開いた人物は？|徳川家康|豊臣秀吉|織田信長|徳川家光|1603年に征夷大将軍となった。
+2|歴史|「鳴くよウグイス平安京」で覚える、平安京に都を移した年は？|794年|710年|1192年|645年|710年は平城京（奈良）。
+2|歴史|大化の改新が始まった年は？|645年|794年|710年|593年|中大兄皇子と中臣鎌足が蘇我氏を倒して始めた改革。
+2|歴史|ペリーが黒船で来航した場所は？|浦賀|長崎|函館|下関|1853年、今の神奈川県横須賀市の浦賀に来航した。
+2|歴史|関ヶ原の戦いが起きた年は？|1600年|1582年|1615年|1543年|岐阜県の関ヶ原で、徳川家康の東軍が石田三成の西軍に勝った。
+2|歴史|本能寺の変で織田信長をおそったのは？|明智光秀|豊臣秀吉|柴田勝家|石田三成|1582年の出来事。
+2|公民|日本国憲法の三大原則に入らないのは？|天皇主権|国民主権|基本的人権の尊重|平和主義|天皇主権は大日本帝国憲法の考え方。
+2|公民|日本国憲法が施行された日は？|1947年5月3日|1946年11月3日|1945年8月15日|1952年4月28日|5月3日は憲法記念日。公布は1946年11月3日（文化の日）。
+2|公民|衆議院議員の任期は？|4年|6年|3年|5年|参議院は6年で、3年ごとに半数を選び直す。衆議院には解散がある。
+2|公民|選挙で投票できる年齢は？|18歳以上|20歳以上|16歳以上|25歳以上|2016年から18歳以上に引き下げられた。
+2|地理|世界で一番面積が大きい国は？|ロシア|カナダ|中国|アメリカ|2位はカナダ。
+2|地理|世界で一番長い川は？|ナイル川|アマゾン川|長江|ミシシッピ川|約6,650km。流域面積が一番広いのはアマゾン川。
+2|地理|世界で一番高い山は？|エベレスト|K2|キリマンジャロ|モンブラン|約8,848m。ネパールと中国の国境にある。
+2|地理|日本の時刻の基準、東経135度の線が通る市は？|兵庫県明石市|神戸市|京都市|大阪市|明石市立天文科学館が有名。
+2|地理|六大陸で一番大きいのは？|ユーラシア大陸|アフリカ大陸|北アメリカ大陸|南極大陸|アジアとヨーロッパをあわせた大陸。
+2|理科|水の化学式は？|H₂O|CO₂|O₂|NaCl|水素原子2つと酸素原子1つ。CO₂は二酸化炭素、NaClは塩化ナトリウム（食塩）。
+2|理科|空気中に一番多くふくまれる気体は？|窒素|酸素|二酸化炭素|アルゴン|窒素が約78%、酸素が約21%。
+2|理科|光の速さは秒速約何km？|約30万km|約3万km|約300km|約300万km|1秒で地球を約7周半する速さ。
+2|理科|音が空気中を伝わる速さは秒速約何m？|約340m|約34m|約3,400m|約34,000m|雷が光ってから音がするまでの秒数×340で、だいたいの距離がわかる。
+2|理科|地球から一番近い恒星は？|太陽|月|北極星|シリウス|月は地球の衛星で、恒星ではない。
+2|理科|植物の細胞にあって、動物の細胞にないものは？|細胞壁|核|細胞膜|ミトコンドリア|葉緑体や大きな液胞も植物の細胞の特徴。
+2|数学|円周率πはおよそいくつ？|3.14|3.41|2.71|1.41|2.71…は自然対数の底e、1.41…は√2。
+2|数学|√2の値は？|1.41421356…|1.73205080…|2.23606797…|1.61803398…|語呂は「一夜一夜に人見頃」。√3は1.732…（人並みにおごれや）。
+2|英語|「Thank you very much.」への返事として一般的なのは？|You're welcome.|I'm sorry.|Excuse me.|See you.|「どういたしまして」。My pleasure. も使う。
+2|英語|「go」の過去形は？|went|goed|gone|going|goneは過去分詞。goは不規則に変化する動詞。
+2|国語|「五月雨」の読み方は？|さみだれ|ごがつあめ|さつきあめ|つゆあめ|昔の暦の5月ごろに降る長雨、つまり梅雨のこと。
+2|国語|「流石」の読み方は？|さすが|りゅうせき|ながれいし|るせき|当て字の一つ。
+2|国語|「一期一会」の意味は？|一生に一度の出会いを大切にすること|一年に一度だけ会うこと|毎日同じ人に会うこと|一度会えば十分なこと|茶道から生まれた言葉。
+2|国語|「八方美人」の意味は？|だれにでもいい顔をする人|とても美しい人|八人の美人|何でもできる人|ほめ言葉ではなく、悪い意味で使うことが多い。
+2|国語|「蛇足」の意味は？|よけいなつけたし|ヘビのように速いこと|一番大事な部分|足りないところ|ヘビの絵に足を描きたして負けた、中国の話から。
+3|歴史|日本で最初の内閣総理大臣は？|伊藤博文|大隈重信|山県有朋|黒田清隆|1885年に内閣制度ができ、初代の総理大臣になった。
+3|歴史|大日本帝国憲法が発布された年は？|1889年|1868年|1912年|1945年|ドイツ（プロイセン）の憲法を参考にしてつくられた。
+3|歴史|江戸幕府が政権を朝廷に返したことを何という？|大政奉還|王政復古|廃藩置県|版籍奉還|1867年、15代将軍の徳川慶喜が行った。
+3|歴史|第一次世界大戦が始まった年は？|1914年|1939年|1904年|1918年|1918年に終わった。第二次世界大戦は1939〜1945年。
+3|世界史|フランス革命が始まった年は？|1789年|1776年|1848年|1815年|1776年はアメリカ独立宣言の年。
+3|世界史|ルネサンスが始まった国は？|イタリア|フランス|ドイツ|イギリス|14〜16世紀、フィレンツェなどを中心に広がった。
+3|世界史|「モナ・リザ」を描いたのは？|レオナルド・ダ・ヴィンチ|ミケランジェロ|ラファエロ|ゴッホ|パリのルーヴル美術館にある。
+3|理科|元素記号「Fe」は何？|鉄|金|銅|銀|金はAu、銀はAg、銅はCu。
+3|理科|元素記号「Au」は何？|金|銀|アルミニウム|アルゴン|ラテン語のaurumから。アルミニウムはAl、アルゴンはAr。
+3|理科|DNAの二重らせん構造を発表したのは？|ワトソンとクリック|メンデル|ダーウィン|パスツール|1953年に発表。メンデルは遺伝の法則で知られる。
+3|理科|万有引力の法則を発見したのは？|ニュートン|ガリレオ|アインシュタイン|ケプラー|リンゴが木から落ちるのを見て考えた、という話が有名。
+3|理科|pHで「中性」を表す数は？|7|0|10|14|7より小さいと酸性、大きいとアルカリ性。
+3|理科|太陽系で一番大きい惑星は？|木星|土星|地球|海王星|直径は地球の約11倍。
+3|数学|2の10乗はいくつ？|1,024|1,000|2,048|512|コンピュータの世界でキロが1,024を指すことがあるのはこのため。
+3|数学|直角をはさむ2辺が3と4の直角三角形。一番長い辺は？|5|6|7|12|三平方の定理：3²＋4²＝9＋16＝25＝5²。
+3|国語|『枕草子』の作者は？|清少納言|紫式部|和泉式部|小野小町|紫式部は『源氏物語』の作者。
+3|国語|『源氏物語』の作者は？|紫式部|清少納言|紀貫之|吉田兼好|平安時代の中ごろに書かれた。紀貫之は『土佐日記』、吉田兼好は『徒然草』。
+3|国語|「春はあけぼの」で始まる作品は？|枕草子|徒然草|方丈記|竹取物語|徒然草は「つれづれなるままに」、方丈記は「ゆく河の流れは絶えずして」で始まる。
+3|国語|夏目漱石の作品は？|吾輩は猫である|羅生門|人間失格|雪国|羅生門は芥川龍之介、人間失格は太宰治、雪国は川端康成。
+3|国語|「役不足」の本来の意味は？|力量にくらべて役目が軽すぎること|役目にくらべて力量が足りないこと|役者が足りないこと|役に立たないこと|よく逆の意味で使われる。力が足りないのは「力不足」。
+3|国語|「情けは人のためならず」の意味は？|人に親切にすると、めぐりめぐって自分によいことがある|情けをかけると相手のためにならない|人に情けは必要ない|自分のためだけに生きるべき|「甘やかすのはよくない」という意味は誤解。
+3|英語|「I have been to Kyoto.」の意味は？|京都に行ったことがある|京都に行ってしまった|京都に行くつもりだ|京都に住んでいる|have been to は経験。have gone to は「行ってしまって今はいない」。
+3|英語|「appointment」の意味は？|人と会う約束・予約|約束を破ること|会議室|遅刻|病院の予約や仕事の約束に使う。
+3|公民|三権分立の「三権」に入らないのは？|報道権|立法権|行政権|司法権|立法は国会、行政は内閣、司法は裁判所。モンテスキューが説いた。
+3|公民|日本銀行の役割でないのは？|個人に住宅ローンを貸す|紙幣を発行する|政府のお金を管理する|銀行にお金を貸す|日本銀行は「発券銀行・政府の銀行・銀行の銀行」とよばれる。
+3|地理|赤道が通る国は？|インドネシア|インド|オーストラリア|メキシコ|ほかにブラジル、ケニア、エクアドルなども通る。
+3|地理|日本（東経135度）とロンドン（0度）の時差は？|9時間|12時間|6時間|3時間|経度15度で1時間ずれる。135÷15＝9。
+3|地理|世界遺産「白川郷・五箇山の合掌造り集落」がある県は？|岐阜県と富山県|長野県と新潟県|石川県と福井県|岐阜県と長野県|白川郷は岐阜県白川村、五箇山は富山県南砺市。
+4|経済|GDPとは？|国内総生産|国民総所得|国際収支|国内総資産|一定期間に国内で新しく生み出されたモノやサービスの価値の合計。
+4|経済|「円高」になると一般に有利になるのは？|輸入する会社|輸出する会社|日本に来る外国人旅行者|外貨預金をしている人|海外のモノを安く買えるため。輸出する会社には不利になる。
+4|経済|インフレーションとは？|物価が上がり続け、お金の価値が下がること|物価が下がり続けること|景気がよくなること|税金が上がること|物価が下がり続けるのはデフレーション。
+4|経済|株式会社で一番上の意思決定機関は？|株主総会|取締役会|監査役会|社長|取締役を選ぶのも株主総会。
+4|経済|日経平均株価は何社の株価から計算している？|225社|100社|500社|30社|東証プライム市場の代表的な225銘柄。アメリカのダウ平均は30社。
+4|経済|「源泉徴収」とは？|給料などから所得税を前もって差し引いて納めること|消費税を前払いすること|年末に税金が返ってくること|会社が払う法人税のこと|1年分の過不足は年末調整で精算する。
+4|経済|2019年10月に引き上げられた後の、消費税の標準税率は？|10%|8%|5%|15%|このとき、飲食料品（お酒・外食を除く）などに8%の軽減税率もできた。
+4|会計|貸借対照表（B/S）が表すものは？|ある時点の財政状態|一定期間の経営成績|現金の出入り|売上の内訳|経営成績は損益計算書（P/L）、お金の流れはキャッシュ・フロー計算書。
+4|会計|損益計算書で「売上高−売上原価」は？|売上総利益（粗利）|営業利益|経常利益|当期純利益|ここからさらに販売費及び一般管理費を引くと営業利益。
+4|会計|「減価償却」とは？|固定資産の購入費用を、使える年数に分けて費用にすること|資産を売って現金にすること|借金を返すこと|税金を減らす手続き|車・建物・パソコンなどが対象になる。
+4|会計|簿記で「借方」はどちら側？|左|右|上|下|左が借方、右が貸方。
+4|会計|「売掛金」とは？|商品を売ったが、まだ受け取っていない代金|商品を買ったが、まだ払っていない代金|前もって受け取ったお金|手元にある現金|まだ払っていない代金は「買掛金」。
+4|会計|「前受金」は簿記で何に分類される？|負債|資産|収益|費用|商品を渡す義務があるので負債。前に払ったお金（前払金）は資産。
+4|マナー|ビジネスメールの「CC」に入れる相手は？|内容を共有しておきたい人|必ず返事がほしい人|ほかの受信者に隠して送りたい人|メールの送り主|ほかの受信者にアドレスを見せずに送るのはBCC。
+4|マナー|応接室で一般に「上座」とされる席は？|入口から一番遠い席|入口に一番近い席|部屋の真ん中の席|窓のない側の席|お客様や目上の人に座ってもらう席。
+4|マナー|エレベーターで目上の人と乗るとき、自分が立つ場所は？|操作盤の前|奥の中央|ドアの正面|どこでもよい|操作盤の前が下座。奥が上座。
+4|マナー|目上の人へのねぎらいの言葉として無難なのは？|お疲れ様です|ご苦労様です|ご苦労さん|お疲れさん|「ご苦労様」は目上から目下に使う言葉とされることが多い。
+4|マナー|「拝見する」は何語？|謙譲語|尊敬語|丁寧語|美化語|自分が「見る」ことをへりくだった言い方。相手が見るときは「ご覧になる」。
+4|マナー|「おっしゃる」はだれの動作に使う？|相手（目上の人）|自分|自分の家族|社外の人に話すときの自社の社長|「言う」の尊敬語。自分が言うときは「申す」「申し上げる」。
+4|マナー|社外の人に自社の社長のことを話すときは？|社長の山田は〜|山田社長は〜|山田社長様は〜|山田さんは〜|社外の人には、身内に敬称をつけない。
+4|マナー|出産・入学など何度あってもよいお祝いに使う水引の結び方は？|蝶結び（花結び）|結び切り|水引はつけない|黒白の結び切り|ほどいて結び直せるので、何度あってもよいお祝いに使う。結婚には結び切りやあわじ結び。
+4|マナー|仏式の葬儀で広く使える香典の表書きは？|御霊前|御祝儀|御年賀|寿|四十九日以降は「御仏前」。浄土真宗では最初から「御仏前」とされる。
+4|IT|URLの「https」の「s」が意味するのは？|通信が暗号化されている|通信が速い|サイトが本物だと保証されている|サーバーが日本にある|暗号化されているだけで、サイトが安全・本物かどうかは別の話。
+4|IT|パスワードの管理として正しいのは？|サービスごとに違う長いパスワードにする|全部同じにして覚えやすくする|誕生日にする|付箋に書いてモニターに貼る|1つもれると全部使われてしまうので使い回しは危険。
+4|IT|フィッシング詐欺への対策として正しいのは？|メールのリンクではなく公式アプリやブックマークから開く|リンクを開いて本物か確かめる|メールに返信して確かめる|何もせず様子を見る|銀行や通販を名乗る偽メール・SMSが多い。
+4|IT|1GBはおよそ何MB？|約1,000MB|約100MB|約10MB|約100万MB|数え方により1,000MBまたは1,024MB。
+4|法律|民法で「成年」とされる年齢は？|18歳|20歳|19歳|21歳|2022年4月から18歳に。ただしお酒・たばこは20歳から。
+4|法律|日本でお酒を飲める年齢は？|20歳から|18歳から|19歳から|21歳から|成年年齢が18歳になっても、飲酒は20歳からのまま。
+4|一般|「還暦」は何歳？|60歳|70歳|77歳|88歳|生まれた年の干支に戻ることから。70歳は古希、77歳は喜寿、88歳は米寿。
+4|一般|「喜寿」は何歳？|77歳|60歳|80歳|88歳|「喜」をくずして書くと「七十七」に見えることから。
+4|一般|「米寿」は何歳？|88歳|77歳|90歳|99歳|「米」の字が「八・十・八」に分けられるから。99歳は白寿（百から一を引くと白）。
+4|一般|結婚25年目のお祝いは？|銀婚式|金婚式|真珠婚式|紙婚式|50年目が金婚式、30年目が真珠婚式、1年目が紙婚式。
+4|一般|昼と夜の長さがほぼ同じになる日は？|春分・秋分|夏至・冬至|立春・立秋|大寒・小寒|夏至は昼が一番長く、冬至は一番短い。
+4|一般|「師走」は何月？|12月|1月|11月|2月|1月睦月、2月如月、3月弥生…11月霜月、12月師走。
+4|一般|「弥生」は何月？|3月|4月|5月|2月|4月は卯月、5月は皐月。
+4|漢字|「出納」の読み方は？|すいとう|しゅつのう|でのう|しゅつとう|お金の出し入れのこと。「出納帳」は経理の基本。
+4|漢字|「相殺」の読み方は？|そうさい|そうさつ|あいさつ|そうせつ|「殺」を「さい」と読む珍しい例。差し引いてゼロにすること。
+4|漢字|「進捗」の読み方は？|しんちょく|しんしょう|しんぽ|しんちゅう|物事がはかどること。「進捗状況」など。
+4|漢字|「凡例」の読み方は？|はんれい|ぼんれい|はんい|ぼんい|本や地図の初めにある、使い方や記号の説明。
+4|漢字|「汎用」の読み方は？|はんよう|ぼんよう|はんにょう|ほうよう|いろいろな用途に広く使えること。
+4|漢字|「捺印」の意味は？|印鑑を押すこと|署名すること|印鑑を作ること|郵便を出すこと|「署名捺印」など。「押印」とほぼ同じ意味。
+4|漢字|「遵守」の意味は？|規則などに従って守ること|大事に保管すること|先例を作ること|人を尊敬すること|「順守」とも書く。「法令遵守」など。
+1|国語|「馬の耳に念仏」の意味は？|いくら言い聞かせても効き目がない|馬は耳がいい|ありがたい話を聞く|念仏で馬がおとなしくなる|似た意味に「馬耳東風」「蛙の面に水」。
+1|国語|「猫に小判」の意味は？|価値がわからない人には、よいものも役に立たない|猫はお金が好き|小さいことにこだわる|とても大事なもの|似た意味に「豚に真珠」。
+1|国語|「三日坊主」の意味は？|あきやすく長続きしないこと|三日間お寺で修行すること|三日で一人前になること|早起きが得意な人|
+1|国語|「花より団子」の意味は？|見た目の美しさより、実際に役立つものを選ぶ|花見はつまらない|団子は花より高い|春は団子を食べる日|
+1|国語|「早起きは三文の徳」の意味は？|早起きすると何かよいことがある|早起きすると損をする|早起きは三日続ければよい|朝は文章を三つ書くとよい|「三文」はわずかなお金のこと。
+1|国語|「十人十色」の意味は？|考えや好みは人それぞれ違う|十人で十色の絵を描く|みんな同じ考え|色の種類がたくさんある|
+1|国語|「春の七草」に入るのは？|なずな|ききょう|おみなえし|すすき|ききょう・おみなえし・すすきは秋の七草。1月7日に七草がゆを食べる。
+1|国語|「林」は「木」を2つ。「森」は「木」をいくつ使う？|3つ|2つ|4つ|5つ|
+1|社会|日本の主な4つの島で一番大きいのは？|本州|北海道|九州|四国|大きい順に本州・北海道・九州・四国。
+1|社会|りんごの収穫量が日本一の県は？|青森県|長野県|山形県|岩手県|全国の約6割を青森県がしめる。2位は長野県。
+1|社会|みかんの収穫量が日本一の県は？|和歌山県|愛媛県|静岡県|熊本県|和歌山県は20年以上連続で全国1位。
+1|社会|日本の一番南にある島は？|沖ノ鳥島|与那国島|南鳥島|波照間島|一番東は南鳥島、一番西は与那国島。
+1|社会|地図記号「卍」が表すのは？|お寺|神社|学校|郵便局|神社は鳥居の形で表す。
+1|社会|地図記号「文」が表すのは？|小・中学校|大学|図書館|役所|高校は「文」を丸で囲んだ記号。
+1|理科|根から吸った水が、葉から水蒸気になって出ていくことを何という？|蒸散|光合成|呼吸|発芽|
+1|理科|電気を通すものは？|アルミニウムはく|ガラス|紙|ゴム|金属は電気を通す。
+1|理科|磁石につくものは？|鉄のくぎ|アルミ缶|10円玉|ガラスのビー玉|アルミや銅は金属でも磁石につかない。
+1|理科|「夏の大三角」に入らない星は？|シリウス|ベガ|アルタイル|デネブ|シリウスは「冬の大三角」の星。
+1|理科|晴れた日、気温が一番高くなるのはだいたい何時ごろ？|午後2時ごろ|正午|午前10時ごろ|午後5時ごろ|太陽が一番高いのは正午ごろだが、地面や空気があたたまるのに時間がかかる。
+1|理科|ヒトの平熱（わきの下）はおよそ？|36〜37℃|34〜35℃|38〜39℃|40℃|
+1|算数|1kgは何g？|1,000g|100g|10,000g|10g|1t（トン）は1,000kg。
+1|算数|うるう年の1年は何日？|366日|365日|364日|360日|うるう年は2月が29日まである。
+1|算数|直径10cmの円の円周はおよそ？|31.4cm|314cm|3.14cm|62.8cm|円周＝直径×3.14。
+1|算数|1辺が5cmの正方形の面積は？|25cm²|20cm²|10cm²|15cm²|5×5＝25。
+1|算数|0.5を分数で表すと？|1/2|1/5|5/1|2/5|
+1|算数|12と18の最大公約数は？|6|3|2|36|最小公倍数は36。
+1|生活|警察を呼ぶ電話番号は？|110|119|118|171|171は災害用伝言ダイヤル。
+1|生活|大きな災害のとき、家族と安否を伝え合うのに使う電話番号は？|171|117|110|104|「災害用伝言ダイヤル」。録音した伝言を家族が聞ける。
+1|生活|地震で家の中にいるとき、まずすることは？|机の下などで頭を守る|すぐに外へ走り出す|エレベーターで降りる|窓を開けに行く|「まず低く、頭を守り、動かない」。
+1|生活|消火器を使うとき、最初にすることは？|安全ピンを抜く|ホースを火に向ける|レバーを握る|火に水をかける|ピンを抜く → ホースを火元に向ける → レバーを握る、の順。
+2|歴史|聖徳太子が定めたとされる、役人の心得は？|十七条の憲法|冠位十二階|大宝律令|御成敗式目|冠位十二階は、能力に応じて役人の位を決めた制度。
+2|歴史|奈良の大仏をつくることを命じた天皇は？|聖武天皇|天智天皇|桓武天皇|推古天皇|東大寺の大仏。仏教の力で国を守ろうとした。
+2|歴史|鎌倉幕府が定めた、最初の武家の法律は？|御成敗式目|武家諸法度|大宝律令|十七条の憲法|1232年、執権の北条泰時が定めた。武家諸法度は江戸幕府。
+2|歴史|元寇（モンゴルの襲来）のときの鎌倉幕府の執権は？|北条時宗|北条泰時|北条政子|足利義満|1274年と1281年の2回攻めてきた。
+2|歴史|金閣を建てた将軍は？|足利義満|足利義政|足利尊氏|徳川家光|銀閣は足利義政が建てた。
+2|歴史|鉄砲が日本に伝わった場所は？|種子島|長崎|平戸|堺|1543年、ポルトガル人が伝えた。
+2|歴史|日本にキリスト教を伝えたのは？|フランシスコ・ザビエル|ペリー|マルコ・ポーロ|コロンブス|1549年、鹿児島に来た。
+2|歴史|参勤交代を制度として定めた将軍は？|徳川家光|徳川家康|徳川綱吉|徳川吉宗|3代将軍。武家諸法度に加えた。
+2|歴史|目安箱を置くなど「享保の改革」を行った将軍は？|徳川吉宗|徳川家光|徳川綱吉|徳川慶喜|8代将軍。
+2|歴史|『解体新書』を出版したのは？|杉田玄白・前野良沢|伊能忠敬|本居宣長|平賀源内|伊能忠敬は正確な日本地図をつくった人。
+2|地理|日本の国土のうち、森林がしめる割合はおよそ？|約3分の2|約3分の1|約半分|約1割|日本は世界有数の森林国。
+2|地理|2023年に人口が世界一になったとされる国は？|インド|中国|アメリカ|インドネシア|国連の推計で、2023年半ばにインドが中国を抜いた。
+2|地理|世界で一番面積が小さい国は？|バチカン市国|モナコ|サンマリノ|リヒテンシュタイン|イタリアのローマ市内にある。
+2|地理|オーストラリアの首都は？|キャンベラ|シドニー|メルボルン|ブリスベン|一番大きい都市はシドニーだが、首都はキャンベラ。
+2|地理|カナダの首都は？|オタワ|トロント|バンクーバー|モントリオール|
+2|地理|アメリカの首都は？|ワシントンD.C.|ニューヨーク|ロサンゼルス|シカゴ|
+2|地理|ブラジルの公用語は？|ポルトガル語|スペイン語|英語|フランス語|南アメリカのほかの多くの国はスペイン語。
+2|地理|世界最大の砂漠（南極などを除く）は？|サハラ砂漠|ゴビ砂漠|アラビア砂漠|カラハリ砂漠|アフリカ大陸の北部に広がる。
+2|理科|地球の表面のうち、海がしめる割合は？|約7割|約5割|約3割|約9割|
+2|理科|1気圧はおよそ何hPa？|1013hPa|100hPa|10hPa|500hPa|天気予報の「ヘクトパスカル」。
+2|理科|血液の中で酸素を運ぶのは？|赤血球|白血球|血小板|血しょう|白血球は細菌と戦い、血小板は血を固める。
+2|理科|火山のマグマが地表近くで急に冷えてできた岩石は？|火山岩|深成岩|堆積岩|変成岩|地下でゆっくり冷えると深成岩（花こう岩など）になる。
+2|理科|オームの法則で、電圧＝？|電流×抵抗|電流÷抵抗|抵抗÷電流|電流＋抵抗|V（電圧）＝R（抵抗）×I（電流）。
+2|理科|地層ができた時代がわかる化石を何という？|示準化石|示相化石|生きた化石|微化石|アンモナイトなど。示相化石はその場所の環境がわかる化石。
+2|数学|(−3)×(−4)は？|12|−12|7|−7|マイナス×マイナスはプラス。
+2|数学|2x＋3＝11 のときxは？|4|7|5|3|2x＝8 なので x＝4。
+2|数学|円の面積を求める式は？|半径×半径×円周率|直径×円周率|半径×2×円周率|直径×直径×円周率|直径×円周率は円周の長さ。
+2|英語|「Nice to meet you.」の意味は？|はじめまして|また会いましょう|おはよう|ごめんなさい|
+2|英語|「library」の意味は？|図書館|研究室|本屋|教室|本屋は bookstore。
+2|英語|「Wednesday」は何曜日？|水曜日|火曜日|木曜日|月曜日|Tuesdayが火曜日、Thursdayが木曜日。
+2|英語|「February」は何月？|2月|1月|4月|11月|
+2|国語|「推敲」の意味は？|文章を何度も練り直すこと|おしはかること|ドアをたたくこと|人を推薦すること|中国の詩人が「推す」か「敲く」かで迷った話から。
+2|国語|「矛盾」の由来は？|どんな盾も突き通す矛と、どんな矛も防ぐ盾を売った商人の話|戦の作戦の名前|二人の兄弟の話|中国の地名|つじつまが合わないこと。
+2|国語|「漁夫の利」の意味は？|二人が争っているすきに、別の人が得をする|魚がたくさんとれる|漁師の知恵|努力して利益を得る|
+2|国語|「五十歩百歩」の意味は？|少し違っても、本質は同じ|五十歩の方がえらい|大きく違う|ゆっくり歩く|
+2|国語|「温故知新」の意味は？|昔のことを学んで、新しい知識や考えを得る|古いものは捨てる|温かい心で接する|新しいものだけを学ぶ|『論語』の言葉。
+3|歴史|日清戦争の講和条約は？|下関条約|ポーツマス条約|日米和親条約|ベルサイユ条約|1895年。ポーツマス条約は日露戦争の講和条約。
+3|歴史|日露戦争の講和条約は？|ポーツマス条約|下関条約|サンフランシスコ平和条約|日米修好通商条約|1905年、アメリカの仲立ちで結ばれた。
+3|歴史|サンフランシスコ平和条約が結ばれた年は？|1951年|1945年|1956年|1964年|翌1952年4月28日に発効し、日本は主権を回復した。
+3|歴史|東海道新幹線が開業した年は？|1964年|1970年|1958年|1972年|東京オリンピックの直前、10月1日に開業。
+3|歴史|日本が国際連合に加盟した年は？|1956年|1945年|1951年|1964年|日ソ共同宣言でソ連との国交が回復した年。
+3|世界史|アメリカ独立宣言が出された年は？|1776年|1789年|1620年|1861年|
+3|世界史|「人民の、人民による、人民のための政治」と演説した大統領は？|リンカーン|ワシントン|ケネディ|ルーズベルト|1863年のゲティスバーグ演説。
+3|世界史|産業革命が最初に起きた国は？|イギリス|フランス|アメリカ|ドイツ|18世紀後半、綿織物工業から始まった。
+3|世界史|ベルリンの壁が崩壊した年は？|1989年|1991年|1961年|1975年|1961年に建設、1990年に東西ドイツ統一、1991年にソ連解体。
+3|世界史|コロンブスがアメリカ大陸近くの島に到達した年は？|1492年|1543年|1600年|1215年|
+3|理科|元素記号「Na」は何？|ナトリウム|窒素|ネオン|ニッケル|窒素はN、ネオンはNe、ニッケルはNi。
+3|理科|元素記号「Ag」は何？|銀|金|アルミニウム|ヒ素|金はAu、アルミニウムはAl、ヒ素はAs。
+3|理科|周期表の1番目の元素は？|水素|ヘリウム|酸素|炭素|2番目はヘリウム。
+3|理科|ダイヤモンドは何という元素でできている？|炭素|ケイ素|酸素|窒素|鉛筆のしん（黒鉛）も同じ炭素でできている。
+3|理科|相対性理論を発表したのは？|アインシュタイン|ニュートン|ホーキング|ボーア|
+3|理科|ヒトの体の細胞にある染色体の数は？|46本|23本|48本|44本|23対で46本。
+3|理科|光が1年間に進む距離を何という？|1光年|1天文単位|1パーセク|1海里|約9.5兆km。
+3|数学|sin30°の値は？|1/2|√3/2|1|√2/2|cos60°も1/2。
+3|数学|log₁₀100 の値は？|2|10|100|1|10²＝100 だから2。
+3|数学|1から10までの整数を全部足すと？|55|50|45|100|(1＋10)×10÷2＝55。
+3|数学|サイコロを1回投げて偶数が出る確率は？|1/2|1/3|1/6|2/3|2・4・6の3通りで、3/6＝1/2。
+3|数学|2進数の「1010」を10進数にすると？|10|1010|12|8|8＋0＋2＋0＝10。
+3|国語|『徒然草』の作者は？|兼好法師（吉田兼好）|鴨長明|清少納言|松尾芭蕉|鴨長明は『方丈記』の作者。
+3|国語|「古池や蛙飛びこむ水の音」の作者は？|松尾芭蕉|小林一茶|与謝蕪村|正岡子規|
+3|国語|芥川龍之介の作品は？|蜘蛛の糸|坊っちゃん|走れメロス|舞姫|坊っちゃんは夏目漱石、走れメロスは太宰治、舞姫は森鷗外。
+3|国語|「檄を飛ばす」の本来の意味は？|自分の考えを広く知らせ、同意を求める|激しくしかって元気づける|大声で応援する|手紙を破り捨てる|「元気のない者を励ます」は、よく使われるが本来の意味ではない。
+3|国語|「なし崩し」の本来の意味は？|少しずつ片付けていくこと|なかったことにすること|一気に崩すこと|ごまかすこと|もとは借金を少しずつ返すこと。
+3|国語|「さわり」の本来の意味は？|話などの一番の聞かせどころ|話の最初の部分|少しだけ触れること|いやな部分|「最初の部分」の意味で使う人が多いが、本来は聞かせどころ。
+3|英語|「I'm looking forward to seeing you.」の意味は？|お会いできるのを楽しみにしています|あなたを探しています|前を向いて見ています|また今度にしましょう|to のあとは -ing 形になるのがポイント。
+3|英語|「borrow」の意味は？|借りる|貸す|返す|買う|貸すは lend。
+3|公民|1つの事件について、3回まで裁判を受けられる仕組みは？|三審制|三権分立|陪審制|裁判員制度|地方裁判所 → 高等裁判所 → 最高裁判所など。
+3|公民|裁判員制度で裁判員が参加するのは？|重大な刑事事件の、地方裁判所での裁判|すべての民事裁判|最高裁判所の裁判|家庭裁判所の裁判|
+3|公民|国の予算を最終的に決めるのは？|国会|内閣|財務省|日本銀行|予算案をつくるのは内閣。
+3|地理|日本で一番人口が多い市は（東京23区を除く）？|横浜市|大阪市|名古屋市|札幌市|約377万人。2位は大阪市。
+4|経済|「GNI」とは？|国民総所得|国内総生産|国民純福祉|国際収支|GDPが国内で生み出した価値、GNIは国民が得た所得の合計。
+4|経済|日本銀行が金融を引きしめると、一般に金利は？|上がる|下がる|変わらない|ゼロになる|景気の過熱やインフレをおさえるために行う。
+4|経済|PER（株価収益率）の計算方法は？|株価÷1株あたり利益|株価×発行済株式数|利益÷株価|配当÷株価|配当÷株価は配当利回り、株価×株式数は時価総額。
+4|経済|「時価総額」とは？|株価×発行済株式数|会社の売上高|会社の資産の合計|株主の人数×株価|会社の規模を比べるときの目安。
+4|経済|NISAとは？|少額投資非課税制度|国民年金の一種|個人型確定拠出年金|住宅ローン減税|個人型確定拠出年金は iDeCo（イデコ）。
+4|経済|「72の法則」で、年利6%で運用するとお金が約2倍になるのは？|約12年後|約6年後|約20年後|約72年後|72÷6＝12。複利で2倍になる年数の目安。
+4|会計|「流動資産」に入るのは？|現金・預金|建物|土地|機械|1年以内に現金になる資産。建物・土地・機械は固定資産。
+4|会計|「買掛金」は何に分類される？|負債|資産|収益|純資産|まだ払っていない仕入代金なので負債。
+4|会計|現金で備品を買ったときの仕訳で、借方は？|備品|現金|売上|買掛金|備品（資産が増える）が借方、現金（資産が減る）が貸方。
+4|会計|「粗利率」の計算方法は？|売上総利益÷売上高|営業利益÷売上高|売上高÷売上原価|純利益÷資産|
+4|会計|「損益分岐点」とは？|売上と費用が等しく、利益がゼロになる点|売上が最大になる点|費用がゼロになる点|赤字が最大になる点|これより売上が多いと黒字、少ないと赤字。
+4|会計|日本の会社で一番多い決算月は？|3月|12月|9月|6月|4月〜翌年3月を1年とする会社が多い。
+4|税|個人の確定申告の期間は原則いつ？|2月16日〜3月15日|1月1日〜1月31日|4月1日〜4月30日|12月1日〜12月31日|所得税の場合。土日の関係で期限が後ろにずれる年もある。
+4|税|青色申告特別控除の最大額は？|65万円|10万円|38万円|100万円|複式簿記に加えてe-Taxでの申告などが条件。e-Taxを使わないと最大55万円。
+4|税|「年末調整」を行うのは主にだれ？|給与を払う会社など|税務署|個人事業主本人|市役所|会社員の1年分の所得税の過不足を精算する。
+4|税|インボイス制度が始まったのはいつ？|2023年10月|2019年10月|2021年4月|2025年1月|適格請求書（インボイス）がないと、原則として仕入税額控除が受けられない。
+4|社会|健康保険で、小学生から69歳までの人が病院の窓口で払う割合は？|3割|1割|2割|5割|小学校入学前は2割。70〜74歳は原則2割、75歳以上は原則1割。
+4|社会|国民年金に加入するのは原則何歳から？|20歳|18歳|22歳|25歳|60歳まで加入する。
+4|社会|消費者トラブルで困ったときの相談窓口「消費者ホットライン」の番号は？|188|189|110|171|「いやや！」と覚える。189は児童相談所の虐待対応ダイヤル。
+4|マナー|名刺交換で正しいのは？|目下の人から先に差し出す|目上の人から先に差し出す|片手で放るように渡す|テーブル越しに渡す|受け取った名刺は、商談中はすぐしまわず机の上に置く。
+4|マナー|電話で相手が名乗らなかったときの聞き方は？|失礼ですが、どちら様でしょうか|あなたはだれですか|お名前は何ですか|名前を言ってください|
+4|マナー|和室で一般に上座とされる場所は？|床の間の前|入口の近く|窓の近く|部屋の真ん中|
+4|マナー|タクシーで一番の上座は（運転手がいる場合）？|運転席の後ろ|助手席|後部座席の真ん中|助手席の後ろ|一番の下座は助手席。
+4|マナー|目上の人に「了解しました」の代わりに使うとよいとされる言葉は？|承知しました|了解です|わかりました〜|オッケーです|「かしこまりました」も使える。
+4|マナー|身内に不幸があった年、年賀状の代わりに出すものは？|喪中はがき（年賀欠礼状）|暑中見舞い|年賀状をそのまま出す|残暑見舞い|11月〜12月上旬に届くように出す。年が明けてからは寒中見舞い。
+4|マナー|会社や部署あての郵便で、宛名の後につけるのは？|御中|様|殿|各位|個人あては「様」。「御中」と「様」は重ねない。
+4|IT|「二段階認証」の説明として正しいのは？|パスワードに加えて、別の方法でも本人確認する|パスワードを2回入力する|2台のパソコンで使う|パスワードを2つ持つ|SMSのコードや認証アプリなど。
+4|IT|「Ctrl＋Z」で一般にできる操作は？|元に戻す|コピー|貼り付け|保存|Ctrl+Cはコピー、Ctrl+Vは貼り付け、Ctrl+Sは保存。
+4|IT|Excelで合計を求める関数は？|SUM|AVERAGE|COUNT|MAX|AVERAGEは平均、COUNTは個数、MAXは最大値。
+4|IT|Excelで条件に合うセルの数を数える関数は？|COUNTIF|SUMIF|VLOOKUP|IF|SUMIFは条件に合うものの合計。
+4|IT|PDFの「P」は何の略？|Portable|Personal|Public|Print|Portable Document Format。
+4|法律|訪問販売のクーリング・オフができる期間は？|8日間|3日間|14日間|30日間|契約書面を受け取った日から数える。マルチ商法は20日間。通信販売は対象外。
+4|法律|普通自動車免許をとれるのは何歳から？|18歳|16歳|20歳|17歳|原付免許・普通二輪免許は16歳から。
+4|法律|中央線のある一般道路（標識なし）での、普通自動車の法定速度は？|60km/h|50km/h|40km/h|80km/h|2026年9月から、中央線などがない生活道路の法定速度は30km/hになった。
+4|法律|2026年9月から、中央線や中央分離帯のない一般道路（生活道路）の法定速度は？|30km/h|20km/h|40km/h|60km/h|それまでは60km/hだった。標識で指定がある道はその速度。
+4|法律|高速道路（高速自動車国道）の本線での最低速度は、原則何km/h？|50km/h|30km/h|60km/h|40km/h|対面通行の区間などは除く。
+4|法律|初心者マークの表示義務があるのは、普通免許をとってから何年未満？|1年未満|3年未満|半年未満|2年未満|
+4|一般|「古希」は何歳？|70歳|60歳|77歳|80歳|杜甫の詩「人生七十古来稀なり」から。
+4|一般|「傘寿」は何歳？|80歳|70歳|88歳|90歳|「傘」の略字「仐」が八十に見えることから。
+4|一般|1年で一番昼が長い日は？|夏至|冬至|春分|立夏|6月21日ごろ。
+4|一般|「葉月」は何月？|8月|6月|7月|9月|
+4|一般|「神無月」は何月？|10月|11月|9月|1月|出雲地方では「神在月」とよぶ。
+4|一般|「勤労感謝の日」は何月何日？|11月23日|11月3日|9月23日|5月3日|11月3日は文化の日。
+4|一般|「建国記念の日」は？|2月11日|2月23日|4月29日|11月3日|2月23日は天皇誕生日、4月29日は昭和の日。
+4|漢字|「為替」の読み方は？|かわせ|ためがえ|いかえ|ためかえ|「為替レート」「郵便為替」など。
+4|漢字|「案の定」の意味は？|思ったとおり|予想に反して|考えすぎ|あいまいに|
+4|漢字|「斡旋」の意味は？|間に入って世話をすること|断ること|ほめること|調べること|仕事の「斡旋」など。
+4|漢字|「稟議」の読み方は？|りんぎ|きんぎ|るんぎ|しんぎ|会社で、決まった担当者が案を作って上の人の承認をもらうこと。もとの読みは「ひんぎ」。`.split('\n').map(l=>{const f=l.split('|');return {lv:+f[0],cat:f[1],q:f[2],ans:f[3],w:f.slice(4,7),e:f[7]}});
+const QL=['ぜんぶ','小学校','中学校','高校','大学・社会人'];
+if(!S.qz)S.qz={seen:{},ok:{},miss:[]};if(S.qlv==null)S.qlv=0;if(!S.qmode)S.qmode='n10';
+const QM={n10:'10問',n20:'20問',review:'まちがえた問題'};
+const qpool=()=>QZ.filter(x=>!S.qlv||x.lv===S.qlv);
+function renderQHome(){
+  $('#qlvs').innerHTML=QL.map((l,i)=>`<button class="chip" data-qlv="${i}" aria-pressed="${S.qlv===i}">${l}</button>`).join('');
+  $('#qmodes').innerHTML=Object.keys(QM).map(k=>`<button class="chip" data-qm="${k}" aria-pressed="${S.qmode===k}">${QM[k]}</button>`).join('');
+  const p=qpool(),seen=p.filter(x=>S.qz.seen[x.q]).length,ok=p.filter(x=>S.qz.ok[x.q]).length,miss=S.qz.miss.filter(q=>p.some(x=>x.q===q)).length;
+  $('#qnote').textContent=`${QL[S.qlv]}：全${p.length}問`;
+  $('#qkv').innerHTML=[['出題ずみ',`${seen} / ${p.length}`],['正解したことがある',`${ok}問`],['まちがえた問題',`${miss}問`],['正解率',seen?Math.round(ok/seen*100)+'%':'−']].map(x=>`<div><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
+  const nr=S.qmode==='review'&&!miss;$('#qgo').disabled=nr;$('#qgo').textContent=nr?'まちがえた問題はまだないで':'はじめる';
+}
+$('#qhome').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.qlv!=null)S.qlv=+b.dataset.qlv;else if(b.dataset.qm)S.qmode=b.dataset.qm;else return;save();renderQHome()});
+let Q=null;
+function qstart(){
+  back='qhome';again=()=>qstart();
+  let p=qpool();
+  if(S.qmode==='review')p=shuffle(p.filter(x=>S.qz.miss.includes(x.q)));
+  else p=shuffle(p).sort((a,b)=>(S.qz.seen[a.q]||0)-(S.qz.seen[b.q]||0)).slice(0,S.qmode==='n20'?20:10);
+  if(S.qmode!=='review')p=shuffle(p);
+  if(!p.length)return;
+  Q={list:p,i:0,ok:0,log:[]};show('quiz');qnext();
+}
+$('#qgo').addEventListener('click',qstart);
+function qnext(){
+  if(Q.i>=Q.list.length)return qfinish();
+  const x=Q.list[Q.i];Q.x=x;Q.ch=shuffle([x.ans,...x.w]);Q.pick=null;
+  $('#qclock').textContent=`${Q.i+1}問目`;$('#qscore').textContent=`${Q.i+1} / ${Q.list.length}`;$('#qprog').style.width=(Q.i/Q.list.length*100)+'%';
+  qdraw();
+}
+function qdraw(){
+  const x=Q.x,done=Q.pick!=null;
+  $('#qtype').textContent=`${QL[x.lv]}・${x.cat}`;
+  let h=`<div class="qq">${x.q}</div><div class="chs">${Q.ch.map((c,i)=>{let k='ch';if(done){if(c===x.ans)k+=' ok';else if(i===Q.pick)k+=' bad'}return `<button class="${k}" data-qc="${i}">${c}</button>`}).join('')}</div>`;
+  if(done){const ok=Q.ch[Q.pick]===x.ans;h+=`<div class="mfb"><h3 class="${ok?'':'ng'}">${ok?'◯ 正解！':'✕ 答えは「'+x.ans+'」'}</h3><p>${x.e}</p><button class="gob" data-act="qnext">次へ</button></div>`}
+  $('#qst').innerHTML=h;
+}
+$('#qst').addEventListener('click',e=>{
+  if(!Q)return;const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.act==='qnext'){Q.i++;return qnext()}
+  if(b.dataset.qc==null||Q.pick!=null)return;
+  Q.pick=+b.dataset.qc;const x=Q.x,ok=Q.ch[Q.pick]===x.ans;
+  S.qz.seen[x.q]=(S.qz.seen[x.q]||0)+1;
+  if(ok){Q.ok++;S.qz.ok[x.q]=1;S.qz.miss=S.qz.miss.filter(q=>q!==x.q)}else if(!S.qz.miss.includes(x.q))S.qz.miss.push(x.q);
+  const d=dk(new Date());S.days[d]=(S.days[d]||0)+1;
+  Q.log.push({x,ok,pick:Q.ch[Q.pick]});save();qdraw();
+  const f=$('#qst .mfb');if(f&&f.scrollIntoView)try{f.scrollIntoView({block:'nearest',behavior:'smooth'})}catch(e){}
+});
+$('#qquit').addEventListener('click',()=>{if(Q&&Q.log.length)return qfinish();Q=null;show('qhome')});
+function qfinish(){
+  const n=Q.log.length;
+  $('#rlabel').textContent=`常識ドリル ・ ${QL[S.qlv]} ・ ${QM[S.qmode]}`;
+  $('#rbig').innerHTML=`${Q.ok}<small>問正解 / ${n}問</small>`;
+  $('#rbest').classList.add('hide');
+  $('#rkv').innerHTML=[['正答率',(n?Math.round(Q.ok/n*100):0)+'%'],['まちがい',(n-Q.ok)+'問']].map(x=>`<div><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
+  const lg=Q.log.slice().sort((a,b)=>a.ok-b.ok);
+  $('#rmiss').innerHTML=lg.map(r=>`<li class="${r.ok?'':'ng'}"><details><summary><span><i>${r.ok?'◯':'✕'}</i>${r.x.q}</span></summary><p>答え：${r.x.ans}${r.ok?'':'\n自分の答え：'+r.pick}\n${r.x.e}</p></details></li>`).join('');
+  Q=null;show('result');
+}
+document.addEventListener('keydown',e=>{if(!Q)return;const n=+e.key;if(n>=1&&n<=4){const b=$(`#qst [data-qc="${n-1}"]`);if(b)b.click()}else if(e.key==='Enter'){const b=$('#qst .gob');if(b)b.click()}});
+
+renderTop();
+}
+</script>
+</body>
+</html>
