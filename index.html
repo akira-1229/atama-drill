@@ -93,6 +93,7 @@ summary{min-height:44px;display:flex;align-items:center;font-weight:800;cursor:p
 .pad button{height:clamp(56px,9vh,74px);border-radius:16px;border:0;background:var(--key);box-shadow:0 3px 0 var(--line);font-size:28px;font-weight:800;user-select:none;-webkit-user-select:none}
 .pad button:active{transform:translateY(3px);box-shadow:none}
 .pad .fn{font-size:18px;color:var(--sub)}
+.pad .reveal{grid-column:1/-1;height:48px;font-size:17px;background:none;border:2px solid var(--line);box-shadow:none}
 .big{font-size:clamp(60px,20vw,92px);font-weight:800;line-height:1;margin-top:10px;font-variant-numeric:tabular-nums}
 .big small{font-size:22px;margin-left:6px}
 .stamp{display:inline-block;margin-top:14px;border:3px solid var(--red);color:var(--red);background:transparent;transform:rotate(-5deg);padding:2px 12px;border-radius:8px;font-weight:800}
@@ -194,12 +195,13 @@ summary{min-height:44px;display:flex;align-items:center;font-weight:800;cursor:p
       <path class="x" pathLength="1000" d="M48 48L152 152"/><path class="x" pathLength="1000" d="M152 48L48 152"/>
     </svg>
   </div>
-  <div class="exp hide" id="exp"><h3 id="exph"></h3><p id="expt"></p><button id="nextb">次へ</button></div>
+  <div class="exp hide" id="exp"><h3 id="exph"></h3><p id="expt"></p><button id="nextb">次の問題</button></div>
   <div class="pad" id="pad">
     <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
     <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
     <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
     <button data-k="c" class="fn">クリア</button><button data-k="0">0</button><button data-k="b" class="fn" aria-label="1文字消す">⌫</button>
+    <button data-k="r" class="fn reveal">解答を見る</button>
   </div>
 </div>
 
@@ -444,6 +446,7 @@ function tick(){
 }
 function press(k){
   if(!G||G.lock)return;
+  if(k==='r')return reveal();
   if(k==='b')G.in=G.in.slice(0,-1);else if(k==='c')G.in='';else if(G.in.length<7)G.in+=k;
   draw();
   if(G.in.length===String(G.q.ans).length)judge();
@@ -466,9 +469,18 @@ function judge(){
   }
   save();
 }
-function showExp(q,ok){
-  const h=$('#exph');h.textContent=ok?'正解！ 解説':`答えは ${yen(q.ans)}${q.u||''}`;h.className=ok?'':'ng';
-  $('#expt').textContent=expOf(q);
+function reveal(){
+  G.lock=true;G.done++;
+  const k=dk(new Date());S.days[k]=(S.days[k]||0)+1;
+  const q=G.q,id=qid(q);
+  G.ng++;G.log.push({q,ok:false,inp:'（解答を見た）'});
+  if(!S.miss.some(m=>qid(m)===id)){S.miss.push({...q});if(S.miss.length>60)S.miss.shift()}
+  const a=$('#ans');a.className='ans';a.textContent=yen(q.ans);
+  showExp(q,false,true);save();
+}
+function showExp(q,ok,rv){
+  const h=$('#exph');h.textContent=ok?'正解！ 解説':`${rv?'解答':'答えは'} ${yen(q.ans)}${q.u||''}`;h.className=ok?'':'ng';
+  $('#expt').textContent='解き方\n'+expOf(q);
   $('#pad').classList.add('hide');$('#exp').classList.remove('hide');G.wait=true;
 }
 $('#nextb').addEventListener('click',()=>{if(G&&G.wait)after()});
