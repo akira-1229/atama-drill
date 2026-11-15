@@ -28,6 +28,7 @@ button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .hide{display:none!important}
 .view{max-width:560px;margin:0 auto}
 .top{background:var(--band);color:var(--ink);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 22px) max(5vw,18px) 20px}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .top h1{font-size:34px;line-height:1.05;margin:0;font-weight:800}
 .stat{display:flex;gap:22px;margin-top:12px;font-weight:700;font-size:14px}
 .stat b{font-size:30px;line-height:1;margin-right:2px}
@@ -73,6 +74,14 @@ summary{min-height:44px;display:flex;align-items:center;font-weight:800;cursor:p
 .log summary{min-height:44px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer}
 .log b{white-space:nowrap}.log .ng b,.log .ng i{color:var(--red)}.log i{font-style:normal;margin-right:6px}
 .log p{color:var(--sub);font-size:15px;padding:0 0 10px}
+#memob[aria-pressed=true]{background:var(--y);color:var(--yink);border-color:var(--y)}
+.board.mon{justify-content:flex-start;padding-top:6px}
+.board.mon .q{font-size:clamp(28px,8.5vw,42px)}.board.mon .q.long{font-size:clamp(17px,4.8vw,22px)}
+.board.mon .ans{font-size:clamp(30px,9vw,44px);margin-top:2px}
+.memo{position:relative;flex:1;width:100%;min-height:170px;margin-top:8px;border:2px solid var(--line);border-radius:14px;
+ background-color:var(--card);background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:28px 28px;background-position:-1px -1px}
+.memo canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;border-radius:12px}
+.cvb{position:absolute;top:6px;right:6px;min-height:40px;padding:0 14px;border-radius:10px;border:2px solid var(--line);background:var(--bg);font-weight:700;font-size:15px}
 .ans.ng{color:var(--red)}.ans s{color:var(--sub);font-size:.55em;margin-right:.3em}
 .mark{position:absolute;inset:0;margin:auto;width:min(68vw,290px);height:min(68vw,290px);pointer-events:none;opacity:0}
 .mark path{fill:none;stroke:var(--red);stroke-width:9;stroke-linecap:round;stroke-dasharray:1000;stroke-dashoffset:1000}
@@ -128,7 +137,7 @@ summary{min-height:44px;display:flex;align-items:center;font-weight:800;cursor:p
 <body>
 <div id="top" class="view">
   <header class="top">
-    <h1>あたまドリル</h1>
+    <div class="hrow"><h1>あたまドリル</h1><button class="quit" id="reload" aria-label="アプリを更新">↻ 更新</button></div>
     <div class="stat"><span><b id="today">0</b>問 今日</span><span><b id="streak">0</b>日 連続</span></div>
     <div class="week" id="week" aria-label="この7日間にといた問題数"></div>
   </header>
@@ -174,11 +183,12 @@ summary{min-height:44px;display:flex;align-items:center;font-weight:800;cursor:p
 </div>
 
 <div id="play" class="view hide">
-  <div class="bar"><button class="quit" id="quit">やめる</button><span class="clock" id="clock">1問目</span><span class="score" id="score"></span></div>
+  <div class="bar"><button class="quit" id="quit">やめる</button><span class="clock" id="clock">1問目</span><span class="score" id="score"></span><button class="quit" id="memob" aria-pressed="false">メモ</button></div>
   <div class="prog"><i id="prog"></i></div>
   <div class="board">
     <div class="q" id="q"></div>
     <div class="arow"><div class="ans" id="ans">&nbsp;</div><span class="unit" id="unit"></span></div>
+    <div class="memo hide" id="memo"><canvas id="cv"></canvas><button class="cvb" id="cvclr">消す</button></div>
     <svg class="mark" id="mk" viewBox="0 0 200 200" aria-hidden="true">
       <path class="o" pathLength="1000" d="M100 20A80 80 0 1 1 99.9 20"/>
       <path class="x" pathLength="1000" d="M48 48L152 152"/><path class="x" pathLength="1000" d="M152 48L48 152"/>
@@ -424,7 +434,7 @@ function next(){
   if(G.list){if(!G.list.length)return finish();G.q={...G.list.pop()}}
   else{let q;do{q=gen(sel.op,sel.lv)}while(qid(q)===G.last);G.q=q}
   G.last=qid(G.q);
-  $('#q').textContent=qt(G.q);$('#q').classList.toggle('long',!!G.q.t);$('#unit').textContent=G.q.u||'';draw();tick();
+  memoClear();$('#q').textContent=qt(G.q);$('#q').classList.toggle('long',!!G.q.t);$('#unit').textContent=G.q.u||'';draw();tick();
 }
 function draw(){const a=$('#ans');a.className='ans';a.textContent=G.in||' '}
 function tick(){
@@ -989,6 +999,20 @@ function qfinish(){
   Q=null;show('result');
 }
 document.addEventListener('keydown',e=>{if(!Q)return;const n=+e.key;if(n>=1&&n<=4){const b=$(`#qst [data-qc="${n-1}"]`);if(b)b.click()}else if(e.key==='Enter'){const b=$('#qst .gob');if(b)b.click()}});
+
+const cv=$('#cv'),cx=cv.getContext('2d');let drawing=false,lx=0,ly=0;
+function memoSize(){const r=cv.getBoundingClientRect(),dp=window.devicePixelRatio||1;if(!r.width)return;cv.width=r.width*dp;cv.height=r.height*dp;cx.setTransform(dp,0,0,dp,0,0);cx.lineCap='round';cx.lineJoin='round';cx.lineWidth=3;cx.strokeStyle='#eef0f3'}
+function memoClear(){cx.save();cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.restore()}
+function memoSet(on){S.memoOn=on;save();$('#memo').classList.toggle('hide',!on);$('.board').classList.toggle('mon',on);$('#memob').setAttribute('aria-pressed',on);if(on)requestAnimationFrame(memoSize)}
+try{new ResizeObserver(()=>{if(S.memoOn)memoSize()}).observe(cv)}catch(e){}
+$('#memob').addEventListener('click',()=>memoSet(!S.memoOn));
+$('#cvclr').addEventListener('click',memoClear);
+const pt=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
+cv.addEventListener('pointerdown',e=>{e.preventDefault();drawing=true;try{cv.setPointerCapture(e.pointerId)}catch(_){}[lx,ly]=pt(e);cx.beginPath();cx.arc(lx,ly,1.5,0,7);cx.fillStyle='#eef0f3';cx.fill()});
+cv.addEventListener('pointermove',e=>{if(!drawing)return;e.preventDefault();const [x,y]=pt(e);cx.beginPath();cx.moveTo(lx,ly);cx.lineTo(x,y);cx.stroke();lx=x;ly=y});
+['pointerup','pointercancel','pointerleave'].forEach(t=>cv.addEventListener(t,()=>drawing=false));
+memoSet(!!S.memoOn);
+$('#reload').addEventListener('click',()=>location.reload());
 
 renderTop();
 }
